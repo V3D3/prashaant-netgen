@@ -113,7 +113,7 @@ def butterfly_gen(f_nodes,n):
         # it should be linked to two switches:
         #   both in the next layer k
         #   first one is to the direct next one,
-        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence stages - k from RIGHT
+        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k) from RIGHT
         switches.append(["S{}w{}w{}".format(f_nodes,k,i), "S{}w{}w{}".format(f_nodes,k,(i ^ (2**(n_stages - k - 1))))])
 
     # last stage (final layer of switches --> output nodes)
@@ -196,22 +196,27 @@ def mesh_head_gen(head_nodes,n,m,final_nodes):
 
 
 
-def butterfly_head_gen(head_nodes,n,final_nodes):
+def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
 
 
     n_stages = log2(n)
-    for k in [0,n_stages-1]: 
-      for i in range(0,n):
-        final_nodes[head_nodes[i + (k/(n_stages-1))]].extend(["S{}{}".format(k,int(i/2))])
+    for i in range(0,n):
+      final_nodes[head_nodes[i]].extend(["S{}w{}".format(0, int(i/2))])
 
-    
-    
-    ##Add to the switches array
+    # add switches
+    for k in range(1, n_stages):
+      # each stage has (n/2) switches in our butterfly
+      for i in range(0, int(n/2)):
+        # current switch is (k-1, i)
+        # it should be linked to two switches:
+        #   both in the next layer k
+        #   first one is to the direct next one,
+        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k - 1) from RIGHT
+        final_switches.append(["S{}w{}".format(k,i), "S{}w{}".format(k,(i ^ (2**(n_stages - k - 1))))])
 
- #   for k in range(0,n_stages):
- #     for i in range(1,n-1):
- #       switches.append() 
-
+    # last stage (final layer of switches --> output nodes)
+    for i in range(0, n/2): # note: n guaranteed to be divisble by 2
+      final_switches.append(["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])])
 
 
 
@@ -270,8 +275,9 @@ for tile_i in L2:
     head_nodes.append(head_node)
 
   elif network_type == "B":
-    tile, head_node = butterfly_gen(f_nodes,n,m)
+    tile, head_node, switches = butterfly_gen(f_nodes,n,m)
     final_nodes.extend(tile)
+    final_switches.extend(switches)
     head_nodes.append(head_node)
 
   elif network_type == "F":
@@ -301,7 +307,7 @@ elif L1_network_type == "M":
     mesh_head_gen(head_nodes,L1_n,L1_m,final_nodes)
     
 elif L1_network_type == "B":
-    butterfly_head_gen(head_nodes,L1_n,final_nodes)
+    butterfly_head_gen(head_nodes,L1_n,final_nodes,final_switches)
     
 elif L1_network_type == "F":
     folded_torus_head_gen(head_nodes,L1_n,L1_m,final_nodes)
