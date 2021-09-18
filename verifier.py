@@ -1,4 +1,8 @@
-# Isomorphism based generated network verifier for two-layer network
+# Visual inspection based generated network verifier for two-layer network
+# Requires:
+# <executable>
+# <testdir>/0/L1Topology.txt
+# <testdir>/0/L0Topology.txt
 
 ###################################
 ######      DEPENDENCIES     ######
@@ -66,8 +70,8 @@ def fileStr(f):
 
 # parses a single line in a topology-describing file
 def parseTopologyLine(s):
-    # split according to SPACEs
-    s = s.split(' ')
+    # split according to COMMAs
+    s = s.split(',')
     # return X:str, n:int, m:int
     return (s[0], int(s[1]), int(s[2]))
 ## END DEF
@@ -145,10 +149,11 @@ def parseNetwork(s, total):
             error('too many edges for node: ' + currnode)
     ## END FOR
 
-    # if total encountered nodes were not as many as expected
-    if encnodes != total:
-        # ERROR
-        error(f'expected {total} nodes, got {encnodes}')
+    #### NOT checking total, due to confusions about butterfly
+    # # if total encountered nodes were not as many as expected
+    # if encnodes != total:
+    #     # ERROR
+    #     error(f'expected {total} nodes, got {encnodes}')
 
     # graph fully constructed
     return G
@@ -196,37 +201,40 @@ for i in range(TESTCOUNT):
     # we use networkx library to save time reimplementing directed graphs
     # totalNodes are passed just as a sanity check
     network1 = parseNetwork(fileStr(SPECOUT), totalNodes)
-    network2 = parseNetwork(fileStr(testdir + SPECEXP), totalNodes)
 
-    # check with the fastest method for isomorphism
-    if nx.faster_could_be_isomorphic(network1, network2) == False:
-        print('FAIL: faster, isomorphism')
-        continue
-    else:
-        # 1st test passed this one
-        print('P1 ', end='')
+    # draw the graph object (might require an IPython environment)
+    nx.draw(network1)
+
+    ###### REMOVED isomorphism based checker
+    # # check with the fastest method for isomorphism
+    # if nx.faster_could_be_isomorphic(network1, network2) == False:
+    #     print('FAIL: faster, isomorphism')
+    #     continue
+    # else:
+    #     # 1st test passed this one
+    #     print('P1 ', end='')
     
-    # if the previous passed, check with a slightly more thorough approach
-    if nx.fast_could_be_isomorphic(network1, network2) == False:
-        print('FAIL: fast, isomorphism')
-        continue
-    else:
-        # 2nd test ok
-        print('P2 ', end='')
+    # # if the previous passed, check with a slightly more thorough approach
+    # if nx.fast_could_be_isomorphic(network1, network2) == False:
+    #     print('FAIL: fast, isomorphism')
+    #     continue
+    # else:
+    #     # 2nd test ok
+    #     print('P2 ', end='')
 
-    # if that passed also, check with another slower approximate check
-    if nx.could_be_isomorphic(network1, network2) == False:
-        print('FAIL: regular, isomorphism')
-        continue
-    else:
-        # 3rd test ok
-        print('P3 ', end='')
+    # # if that passed also, check with another slower approximate check
+    # if nx.could_be_isomorphic(network1, network2) == False:
+    #     print('FAIL: regular, isomorphism')
+    #     continue
+    # else:
+    #     # 3rd test ok
+    #     print('P3 ', end='')
 
-    # and if all the previous ones passed, thoroughly check for isomorphism
-    if nx.is_isomorphic(network1, network2) == False:
-        print('FAIL: full test, isomorphism')
-        continue
-    else:
-        # all good
-        print('ALL OK')
+    # # and if all the previous ones passed, thoroughly check for isomorphism
+    # if nx.is_isomorphic(network1, network2) == False:
+    #     print('FAIL: full test, isomorphism')
+    #     continue
+    # else:
+    #     # all good
+    #     print('ALL OK')
 ## END FOR
