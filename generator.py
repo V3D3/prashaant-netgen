@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from math import log2
 
 
@@ -197,10 +198,9 @@ def mesh_head_gen(head_nodes,n,m,final_nodes):
 
 
 def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
-
-
     n_stages = log2(n)
     for i in range(0,n):
+      # add the link to these new switches in the head nodes which will act as input
       final_nodes[head_nodes[i]].extend(["S{}w{}".format(0, int(i/2))])
 
     # add switches
@@ -320,9 +320,4 @@ else :
 
 
 print_func(final_nodes)
-
-
-
-
-
 
