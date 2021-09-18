@@ -1,62 +1,100 @@
 #!/usr/bin/python
+#####################################################################################################
+#####################################################################################################
+### Network on Chip - Project - 1
+### Generating a two level network of nodes
+### Authors : Vedaant Alok Arya, Pole Praneeth Shashank Nag (EE19B118)
+###
+###------------------------------------INPUT----------------------------
+###The two input files:
+### L1Topology.txt will have single line with this data
+### X,n,m where X = C, R, M, F, H, B
+### C: Chain, R: Ring, M: Mesh, F: Folded Torus, H: Hypercube of dimension 3 (8 nodes), B: Butterfly network
+### n: Number of nodes in first dimension
+### m: Number of nodes in second dimension - it is 1 for C and R.
+### n = m = 3 for H and 
+### n = m = 2^k  (Power of 2) for B for some k > 1
+### L2Topology.txt will have n X m lines with each line as the same syntax as above.
+###-
+###-------------OUTPUT---------------------------------------
+### All nodes in a single file. Each node described in the form
+###******************
+###NodeID: 
+###Links: <Number of links> (say P of them)
+###P lines of this format <L(i): Destination Node> 1<= i <= P
+###**************************
+
 from math import log2
 
+# The list final_nodes stores all the connections to a particular nodes (a list of list)
+# The NodeID for each node is N<i>, where <i> is its position in the final_nodes list
 
-
+# Function to generate the tile for a chain type L2 connection
+# f_nodes in the pointer to the first node in the particular tile in the final_nodes list
+# n is the length of the chain
 def chain_gen(f_nodes,n):
 
-
+    # List which stores a list of nodes connected to each node in the tile
     tile = []
-
+    # Trivial case of one node. It isn't connected to anything
     if n == 1:
         tile.append([])
-        head_node = f_nodes
+        head_node = f_nodes  # Head node is the pointer to the head node, as in the final_nodes list
 
     else :
 
+        #Adding the nodes linked to the leftmost node in a chain. It is connected to only one node
         tile.append(["N{}".format(f_nodes + 1) ])  
-
+        #Continuing for the other nodes
         for i in range(1, n-1) :
             tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
 
-            tile.append(["N{}".format(f_nodes + n-2)])
+        #Adding the nodes linked ot the rightmost node in a chain. Connected to only one node    
+        tile.append(["N{}".format(f_nodes + n-2)])
 
-            head_node = f_nodes + int((n)/2)
+        head_node = f_nodes + int((n)/2) # The center node is the head node
 
-
+        
+    #Returning the tile and pointer to head_node
     return tile, head_node
 
 
-
+# Function to generate the tile for a ring type L2 connection
+# n is the length of the ring
 def ring_gen(f_nodes,n):
 
     tile = []
-
+    #Trivial case of one node
     if n == 1:
         tile.append([])
-
+    #Ring with only two nodes. The nodes are connected to each other
     if n == 2:
         tile.append(["N{}".format(f_nodes + 1) ])
         tile.append(["N{}".format(f_nodes) ])
 
-
+    #Non trivial case
     else :
-
+        #Circularly connecting the nodes. The nodes on either ends are connected to the ones on the other end
         tile.append(["N{}".format(f_nodes + k) for k in [ n - 1,1 ] ]) 
         for i in range(1,n-1) :
           tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
 
         tile.append(["N{}".format(f_nodes + k) for k in [n - 2,0] ])  
 
-    head_node = f_nodes
+    head_node = f_nodes  #Pointer to the head node, i.e., the first node in the chain
 
-    return tile, head_node
+    return tile, head_node  #Returning the tile and head_node
 
 
 
+# Function to generate the tile for a hypercube type L2 connection
+# Dimension is forced as 3 (8 nodes)
+# f_nodes is the pointer to the first node in the Hypercube
 def hypercube_gen(f_nodes):
 
     tile = []
+    
+    #Adding links based on the relative position of the nodes. The nodes are numbered starting from one face and then the opposite face
 
     tile.append(["N{}".format(f_nodes + k) for k in [1,3,4 ]])  
     tile.append(["N{}".format(f_nodes + k) for k in [0,2,5 ]])  
@@ -67,11 +105,14 @@ def hypercube_gen(f_nodes):
     tile.append(["N{}".format(f_nodes + k) for k in [2,5,7 ]])  
     tile.append(["N{}".format(f_nodes + k) for k in [3,6,4 ]])  
 
-    head_node = f_nodes
+    head_node = f_nodes  #Pointer to the head node
 
     return tile, head_node
 
 
+# Function to generate the tile for a mesh type L2 connection
+# Dimension of n x m (n rows and m columns)
+# f_nodes is the pointer to the first node in the Hypercube
 
 def mesh_gen(f_nodes,n,m):
 
@@ -81,22 +122,29 @@ def mesh_gen(f_nodes,n,m):
     
     tile = []
 
+    #We need to separately handle the nodes on the perimeter as these have fewer than 4 linkages
+   
+    ####First Row ####
+    #Handling the first node; which is connected only to the one on the right and the one in the next row
     tile.append(["N{}".format(k) for k in [f_nodes + 1,f_nodes + m]])
-    ## now do for first row till second last; then do for last node in the first row
+    ## now do for first row till second last
     for j in range(1, m -1):
       tile.append(["N{}".format(k) for k in [f_nodes + j -1,f_nodes + j + 1, f_nodes + m * 1 + j  ] ])  
-    
+    # Now the last node in the first node
     tile.append(["N{}".format(k) for k in [f_nodes + m - 2,f_nodes + m + m -1]])
 
+    ### Second row onwards ####
     for i in range(1, n-1) :
     #then in here, do similarly for first node of the row
       tile.append(["N{}".format(k) for k in [f_nodes + m * i  + 1, f_nodes + m * (i-1) , f_nodes + m * (i+1) ]])
+      #For the nodes completely inside
       for j in range(1, m -1):
         tile.append(["N{}".format(k) for k in [f_nodes + m * i + j -1,f_nodes + m * i + j + 1, f_nodes + m * (i-1) + j, f_nodes + m * (i+1) + j  ] ])  
    
       #then in here, do similarly for last node of the row
       tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-1) -1, f_nodes + m * (i-1) + (m-1), f_nodes + m * (i+1) + (m-1)  ] ])
 
+    ### Last row ####    
     #then do for the last row like the first row
     tile.append(["N{}".format(k) for k in [f_nodes + m * (n-1)  + 1, f_nodes + m * ((n-1)-1)]])    
     for j in range(1, m -1):
@@ -150,6 +198,8 @@ def folded_torus_gen(f_nodes,n,m):
 
     tile = []
 
+    # The logic for folded torus is that each node is connected to a node which is 2 columns away or 2 rows away. Incase of corner nodes, they are connected to the adjacent nodes
+    # Owing to this, we need to handle the nodes running along a boundary of 2 from all sides separately, as these won't have 2 nodes on all its sides 
     ########First Row##################
 
     #First Node
@@ -238,6 +288,9 @@ def folded_torus_gen(f_nodes,n,m):
     return tile, head_node
 
 
+## The following functions handle linkages for the L1 topology. The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages
+
+# For ring type L1 topology
 def ring_head_gen(head_nodes,n,final_nodes):
 
 
@@ -257,7 +310,7 @@ def ring_head_gen(head_nodes,n,final_nodes):
         final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[k]) for k in [ n - 2,0] ])  
 
 
-
+# For chain type L1 topology
 def chain_head_gen(head_nodes,n,final_nodes):
 
 
@@ -271,7 +324,7 @@ def chain_head_gen(head_nodes,n,final_nodes):
         final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[n-2])])
 
 
-
+# For hypercube type L1 topology
 def hypercube_head_gen(head_nodes,final_nodes):
 
 
@@ -286,7 +339,7 @@ def hypercube_head_gen(head_nodes,final_nodes):
 
 
 
-
+# For mesh type L1 topology
 def mesh_head_gen(head_nodes,n,m,final_nodes):
 
     if n < 2 or m < 2:
@@ -319,7 +372,7 @@ def mesh_head_gen(head_nodes,n,m,final_nodes):
    
 
 
-
+# FOr Butterfly type L1 topology
 def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
     n_stages = int(log2(n))
     for i in range(0,n):
@@ -341,7 +394,7 @@ def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
     for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
       final_switches.append(["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])])
     
-
+# For folded torus type L1 topology
 def folded_torus_head_gen(head_nodes,n,m,final_nodes):
 
     ########First Row##################
@@ -430,62 +483,67 @@ def folded_torus_head_gen(head_nodes,n,m,final_nodes):
 
 
 
-
+## Function to print the network.txt file
 def print_func(final_nodes, final_switches):
-  file3 = open(r"Network.txt","w")
+  file3 = open(r"Network.txt","w")   # Create file to print
 
   for node_id in range(0,len(final_nodes)):
-    print("NodeID: N{}".format(node_id),file=file3)
-    print("Links : {}".format(len(final_nodes[node_id])),file=file3)
+    print("NodeID: N{}".format(node_id),file=file3)   #Print node id
+    print("Links : {}".format(len(final_nodes[node_id])),file=file3) #Print number of links
 
     for link in range(0,len(final_nodes[node_id])):
-      print("L({}):{}".format(link,final_nodes[node_id][link]),file=file3)
+      print("L({}):{}".format(link,final_nodes[node_id][link]),file=file3)  #Print each link as per the final_nodes file
 
 
+### Start of parsing ###
 
-
-file1 = open(r"L1Topology.txt","r")
+file1 = open(r"L1Topology.txt","r")  
 file2 = open(r"L2Topology.txt","r")
 
-L1 = file1.read()
-L2 = file2.readlines()
+L1 = file1.read()        # Read the L1 topology file to find the top layer topology
+L2 = file2.readlines()   # Read the L2 topology file and generate a list of network for each tile
 
+# Assign values from the L1 topology
 L1_network_type, L1_n, L1_m = L1.split(",")
 L1_n = int(L1_n)
 L1_m = int(L1_m)
 
-
-final_nodes = []
-head_nodes = []
-final_switches = []
+#Define final lists
+final_nodes = []     # Stores the links for all the nodes
+head_nodes = []      # Stores pointers to head nodes
+final_switches = []  # Stores the switches
 
 
 
 #Adding the nodes and linking as per the tiles in L2 topology
 for tile_i in L2:
 
+    #Extract the network type and parameters for the tile, and call corresponding functions
+
   network_type, n, m = tile_i.split(",")
   n = int(n)
   m = int(m)
   f_nodes = len(final_nodes)
 
+  ## The linkages received from the tiles are added extended into the overall final_nodes list
+  ## The head node pointers received from each tile is also appended to the head_nodes list
   if network_type == "R":
-    tile, head_node = ring_gen(f_nodes,n)
+    tile, head_node = ring_gen(f_nodes,n)  # Ring generator
     final_nodes.extend(tile)
     head_nodes.append(head_node)
 
   elif network_type == "C":
-    tile, head_node = chain_gen(f_nodes,n)
+    tile, head_node = chain_gen(f_nodes,n)  # Chain generator
     final_nodes.extend(tile)
     head_nodes.append(head_node)
 
   elif network_type == "M":
-    tile, head_node = mesh_gen(f_nodes,n,m)
+    tile, head_node = mesh_gen(f_nodes,n,m) # Mesh generator
     final_nodes.extend(tile)
     head_nodes.append(head_node)
 
   elif network_type == "B":
-    tile, head_node, switches = butterfly_gen(f_nodes,n,m)
+    tile, head_node, switches = butterfly_gen(f_nodes,n,m) # Butterfly generator
     final_nodes.extend(tile)
     final_switches.extend(switches)
     head_nodes.append(head_node)
@@ -505,7 +563,7 @@ for tile_i in L2:
 
 
 
-##Adding the head nodes links
+## Calling the functions to Add the head nodes links
 
 if L1_network_type == "R":
     ring_head_gen(head_nodes,L1_n,final_nodes)
