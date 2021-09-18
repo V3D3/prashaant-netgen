@@ -96,19 +96,24 @@ def butterfly_gen(f_nodes,n):
     tile = []
     switches = []
 
+    # add nodes ("Node"s)
     n_stages = log2(n)
-    for k in [0,n_stages-1]: 
+    for k in range[0,n_stages-1]: 
       for i in range(0,n):
         tile.append(["S{}{}".format(k,int(i/2))])
     
-    head_node = f_nodes + n/2
-    ##Add to the switches array
+    head_node = f_nodes + int(n/2)
 
- #   for k in range(0,n_stages):
- #     for i in range(1,n-1):
- #       switches.append() 
-
-
+    # add switches
+    for k in range(1, n_stages):
+      # each stage has (n/2) switches in our butterfly
+      for i in range(0, int(n/2)):
+        # current switch is (k-1, i)
+        # it should be linked to two switches:
+        #   both in the next layer k
+        #   first one is to the direct next one,
+        #   other one is to one bit flipped, the index of bit is k-1 from right
+        switches.append(["S{}{}".format(k,i), "S{}{}".format(k,(i ^ (2**(k-1))))])
 
     return tile, head_node, switches
 
