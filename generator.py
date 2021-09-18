@@ -3,7 +3,7 @@
 #####################################################################################################
 ### Network on Chip - Project - 1
 ### Generating a two level network of nodes
-### Authors : Vedaant Alok Arya, Pole Praneeth Shashank Nag (EE19B118)
+### Authors : Vedaant Alok Arya (CS19B046), Pole Praneeth (CS18B036), Shashank Nag (EE19B118)
 ###
 ###------------------------------------INPUT----------------------------
 ###The two input files:
