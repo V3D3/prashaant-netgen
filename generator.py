@@ -86,7 +86,9 @@ def mesh_gen(f_nodes,n,m):
    
 
 
-    head_node = f_nodes + int(n/2)*m +  m*int((m)/2);
+    head_node = f_nodes + int(n/2)*m +  int((m)/2);
+
+
 
     return tile, head_node
 
@@ -263,6 +265,11 @@ for tile_i in L2:
     final_nodes.extend(tile)
     head_nodes.append(head_node)
 
+  elif network_type == "H":
+    tile, head_node = hypercube_gen(f_nodes)
+    final_nodes.extend(tile)
+    head_nodes.append(head_node)
+
   else :
     print("Invalid network type")
 
@@ -280,17 +287,19 @@ elif L1_network_type == "M":
     mesh_head_gen(head_nodes,L1_n,L1_m,final_nodes)
     
 elif L1_network_type == "B":
-    ring_head_gen(head_nodes,L1_n,final_nodes)
+    butterfly_head_gen(head_nodes,L1_n,final_nodes)
     
 elif L1_network_type == "F":
-    ring_head_gen(head_nodes,L1_n,L1_m,final_nodes)
+    folded_torus_head_gen(head_nodes,L1_n,L1_m,final_nodes)
+
+elif L1_network_type == "H":
+    hypercube_head_gen(head_nodes,final_nodes)
     
 else :
     print("Invalid network type")
 
 
 print_func(final_nodes)
-
 
 
 
