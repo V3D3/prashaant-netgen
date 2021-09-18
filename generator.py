@@ -100,9 +100,9 @@ def butterfly_gen(f_nodes,n):
 
     # add nodes ("Node"s)
     n_stages = log2(n)
-    for k in range[0,n_stages-1]: 
-      for i in range(0,n):
-        tile.append(["S{}{}".format(k,int(i/2))])
+    # first stage
+    for i in range(0,n):
+      tile.append(["S{}{}".format(0, int(i/2))])
     
     head_node = f_nodes + int(n/2)
 
@@ -116,6 +116,10 @@ def butterfly_gen(f_nodes,n):
         #   first one is to the direct next one,
         #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence stages - k from RIGHT
         switches.append(["S{}{}".format(k,i), "S{}{}".format(k,(i ^ (2**(n_stages - k - 1))))])
+
+    # last stage (final layer of switches --> output nodes)
+    for i in range(0, n/2): # note: n guaranteed to be divisble by 2
+      switches.append(["N{}".format(i*2), "N{}".format(i*2 + 1)])
 
     return tile, head_node, switches
 
