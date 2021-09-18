@@ -114,8 +114,8 @@ def butterfly_gen(f_nodes,n):
         # it should be linked to two switches:
         #   both in the next layer k
         #   first one is to the direct next one,
-        #   other one is to one bit flipped, the index of bit is k-1 from right
-        switches.append(["S{}{}".format(k,i), "S{}{}".format(k,(i ^ (2**(k-1))))])
+        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence stages - k from RIGHT
+        switches.append(["S{}{}".format(k,i), "S{}{}".format(k,(i ^ (2**(n_stages - k - 1))))])
 
     return tile, head_node, switches
 
