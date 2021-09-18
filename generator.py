@@ -627,6 +627,7 @@ def print_func(final_nodes, final_switches):
     for link in range(0,len(final_nodes[node_id])):
       print("L({}):{}".format(link,final_nodes[node_id][link]),file=file3)  #Print each link as per the final_nodes file
 
+    
   for switch_id in final_switches:
     print("NodeID: {}".format(switch_id), file=file3)
     print("Links : {}".format(len(final_switches[switch_id])), file=file3)
@@ -683,7 +684,7 @@ for tile_i in L2:
     head_nodes.append(head_node)
 
   elif network_type == "B":
-    tile, head_node, switches = butterfly_gen(f_nodes,n,m) # Butterfly generator
+    tile, head_node, switches = butterfly_gen(f_nodes,n) # Butterfly generator
     final_nodes.extend(tile)
     final_switches.update(switches)
     head_nodes.append(head_node)
@@ -728,6 +729,6 @@ else :
     print("Invalid network type")
     exit()
 
-
+# Call the function to print the node descriptions into the output file
 print_func(final_nodes, final_switches)
 
