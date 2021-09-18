@@ -23,6 +23,10 @@
 ###Links: <Number of links> (say P of them)
 ###P lines of this format <L(i): Destination Node> 1<= i <= P
 ###**************************
+###
+### NOTE : THE PROGRAM ASSUMES THAT THE INPUT FILES HAVE THE CORRECT SPECS
+
+
 
 from math import log2
 
@@ -208,41 +212,70 @@ def butterfly_gen(f_nodes,n):
 
 def folded_torus_gen(f_nodes,n,m):
 
+
+    if n < 3 or m < 3:
+        print("Invalid Folded torus dimensions. Each dimension should have atleast 3 nodes, else it cannot be folded")
+        exit()
     tile = []
 
-    # The logic for folded torus is that each node is connected to a node which is 2 columns away or 2 rows away. Incase of corner nodes, they are connected to the adjacent nodes
-    # Owing to this, we need to handle the nodes running along a boundary of 2 from all sides separately, as these won't have 2 nodes on all its sides 
     ########First Row##################
 
     #First Node
     tile.append(["N{}".format(k) for k in [f_nodes + 2,f_nodes + 1,f_nodes + m,f_nodes + 2*m]])
     #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + 1+ 2,f_nodes + 1 - 1,f_nodes + 1+ m,f_nodes + 1 + 2*m]])
-
+    if (m>3):
+        tile.append(["N{}".format(k) for k in [f_nodes + 1+ 2,f_nodes + 1 - 1,f_nodes + 1+ m,f_nodes + 1 + 2*m]])
+    else :    
+        tile.append(["N{}".format(k) for k in [f_nodes + 1+ 1,f_nodes + 1 - 1,f_nodes + 1+ m,f_nodes + 1 + 2*m]])
     ## now do for first row till last but 2; then do for last node in the first row
     for j in range(2, m -2):
       tile.append(["N{}".format(k) for k in [f_nodes + j -2,f_nodes + j + 2, f_nodes + m * 1 + j,f_nodes + m * 2 + j  ] ])  
     
     #Second last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m - 2)- 2,f_nodes + (m-2)+1,f_nodes + (m-2)+ m,f_nodes + (m-2)+ 2*m]])
+    if (m>3):
+        tile.append(["N{}".format(k) for k in [f_nodes + (m - 2)- 2,f_nodes + (m-2)+1,f_nodes + (m-2)+ m,f_nodes + (m-2)+ 2*m]])
     #Last node of first row
     tile.append(["N{}".format(k) for k in [f_nodes + (m - 1)- 2,f_nodes + (m-1)-1,f_nodes + (m-1)+ m,f_nodes + (m-1)+ 2*m]])
 
     ########Second Row##################
 
     #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + m + 2,f_nodes + m + 1,f_nodes + m - m,f_nodes + m + 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 2,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + 2*m]])
+    if (n>3):
+        tile.append(["N{}".format(k) for k in [f_nodes + m + 2,f_nodes + m + 1,f_nodes + m - m,f_nodes + m + 2*m]])
+    else :
+        tile.append(["N{}".format(k) for k in [f_nodes + m + 2,f_nodes + m + 1,f_nodes + m - m,f_nodes + m + m]])
 
-    ## now do for second row till last but 2; then do for last node in the first row
+    #Second Node
+    if m > 3 and n > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 2,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + 2*m]])
+    elif m > 3 and n == 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 2,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + m]])
+    elif m == 3 and n > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 1,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + 2*m]])
+    elif m == 3 and n == 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 1,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + m]])
+
+    ## now do for second row till last but 2; then do for last node in the second row
     for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + (m + j) -2,f_nodes + (m + j) + 2, f_nodes + (m + j) - m * 1 ,f_nodes + (m +j)+ m * 2   ] ])  
-    
+      if n > 3 :
+          tile.append(["N{}".format(k) for k in [f_nodes + (m + j) -2,f_nodes + (m + j) + 2, f_nodes + (m + j) - m * 1 ,f_nodes + (m +j)+ m * 2   ] ])  
+      else :
+          tile.append(["N{}".format(k) for k in [f_nodes + (m + j) -2,f_nodes + (m + j) + 2, f_nodes + (m + j) - m * 1 ,f_nodes + (m +j)+ m   ] ])  
+
     #Second last node of second row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 2)- 2,f_nodes + (m + m-2)+1,f_nodes + (m + m-2) - m,f_nodes + (m + m-2)+ 2*m]])
-    #Last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 1)- 2,f_nodes + (m + m-1)-1,f_nodes + (m + m-1) - m,f_nodes + (m + m-1)+ 2*m]])
+    if m > 3 and n > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 2)- 2,f_nodes + (m + m-2)+1,f_nodes + (m + m-2) - m,f_nodes + (m + m-2)+ 2*m]])
+
+    elif m > 3 and n == 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 2)- 2,f_nodes + (m + m-2)+1,f_nodes + (m + m-2) - m,f_nodes + (m + m-2)+ m]])
+    
+    #Last node of second row
+    if n > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 1)- 2,f_nodes + (m + m-1)-1,f_nodes + (m + m-1) - m,f_nodes + (m + m-1)+ 2*m]])
+
+    else :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 1)- 2,f_nodes + (m + m-1)-1,f_nodes + (m + m-1) - m,f_nodes + (m + m-1)+ m]])
+
 
     ########################################
     ########Other Rows######################
@@ -251,46 +284,67 @@ def folded_torus_gen(f_nodes,n,m):
     #then in here, do similarly for first node of the row
       tile.append(["N{}".format(k) for k in [f_nodes + m * i  + 2,f_nodes + m * i  + 1, f_nodes + m * (i-2) , f_nodes + m * (i+2) ]])
     #then in here, do similarly for second node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + 1 + 2,f_nodes + m * i + 1 - 1, f_nodes + m * (i-2) + 1 , f_nodes + m * (i+2) + 1]])
-
+      if m > 3 :
+          tile.append(["N{}".format(k) for k in [f_nodes + m * i + 1 + 2,f_nodes + m * i + 1 - 1, f_nodes + m * (i-2) + 1 , f_nodes + m * (i+2) + 1]])
+      else :
+          tile.append(["N{}".format(k) for k in [f_nodes + m * i + 1 + 1,f_nodes + m * i + 1 - 1, f_nodes + m * (i-2) + 1 , f_nodes + m * (i+2) + 1]])
+          
       for j in range(2, m -2):
         tile.append(["N{}".format(k) for k in [f_nodes + m * i + j -2,f_nodes + m * i + j + 2, f_nodes + m * (i-2) + j, f_nodes + m * (i+2) + j  ] ])  
    
       #then in here, do similarly for second last node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-2) -2,f_nodes + m * i + (m-2) +1, f_nodes + m * (i-2) + (m-2), f_nodes + m * (i+2) + (m-2)  ] ])
+      if m > 3 :
+          tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-2) -2,f_nodes + m * i + (m-2) +1, f_nodes + m * (i-2) + (m-2), f_nodes + m * (i+2) + (m-2)  ] ])
       #then in here, do similarly for last node of the row
       tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-1) -2,f_nodes + m * i + (m-1) -1, f_nodes + m * (i-2) + (m-1), f_nodes + m * (i+2) + (m-1)  ] ])
-
+          
     ########################################    
     ########Second Last Row##################
 
-    #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + m*(n-2) + 2,f_nodes + m*(n-2) + 1,f_nodes + m*(n-2) + m,f_nodes + m*(n-2) - 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + 1) + 2,f_nodes + (m*(n-2)+1) - 1,f_nodes + (m*(n-2)+1) + m,f_nodes + (m*(n-2)+1) - 2*m]])
+    if n > 3 :
+        #First Node
+        tile.append(["N{}".format(k) for k in [f_nodes + m*(n-2) + 2,f_nodes + m*(n-2) + 1,f_nodes + m*(n-2) + m,f_nodes + m*(n-2) - 2*m]])
+        #Second Node
+        if m > 3 :
+            tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + 1) + 2,f_nodes + (m*(n-2)+1) - 1,f_nodes + (m*(n-2)+1) + m,f_nodes + (m*(n-2)+1) - 2*m]])
+        else :
+            tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + 1) + 1,f_nodes + (m*(n-2)+1) - 1,f_nodes + (m*(n-2)+1) + m,f_nodes + (m*(n-2)+1) - 2*m]])
 
-    ## now do for second last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + j) -2,f_nodes + (m*(n-2) + j) + 2, f_nodes + (m*(n-2) + j) + m * 1 ,f_nodes + (m*(n-2) +j) - 2*m   ] ])  
+        ## now do for second last row till last but 2; then do for the last 2 nodes in the row
+        for j in range(2, m -2):
+          tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + j) -2,f_nodes + (m*(n-2) + j) + 2, f_nodes + (m*(n-2) + j) + m * 1 ,f_nodes + (m*(n-2) +j) - 2*m   ] ])  
     
-    #Second last node of second last row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 2)- 2,f_nodes + (m*(n-2) + m-2)+1,f_nodes + (m*(n-2) + m-2) + m,f_nodes + (m*(n-2) + m-2) - 2*m]])
-    #Last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 1)- 2,f_nodes + (m*(n-2) + m-1)-1,f_nodes + (m*(n-2) + m-1) + m,f_nodes + (m*(n-2) + m-1) - 2*m]])
+        #Second last node of second last row
+        if m > 3 :
+            tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 2)- 2,f_nodes + (m*(n-2) + m-2)+1,f_nodes + (m*(n-2) + m-2) + m,f_nodes + (m*(n-2) + m-2) - 2*m]])
+        else :
+            tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 2)- 1,f_nodes + (m*(n-2) + m-2)+1,f_nodes + (m*(n-2) + m-2) + m,f_nodes + (m*(n-2) + m-2) - 2*m]])
+
+
+        #Last node of first row
+        tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 1)- 2,f_nodes + (m*(n-2) + m-1)-1,f_nodes + (m*(n-2) + m-1) + m,f_nodes + (m*(n-2) + m-1) - 2*m]])
 
     ########Last Row##################
 
     #First Node
     tile.append(["N{}".format(k) for k in [f_nodes + m*(n-1) + 2,f_nodes + m*(n-1) + 1,f_nodes + m*(n-1) - m,f_nodes + m*(n-1) - 2*m]])
     #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + 1) + 2,f_nodes + (m*(n-1)+1) - 1,f_nodes + (m*(n-1)+1) - m,f_nodes + (m*(n-1)+1) - 2*m]])
+    if m > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + 1) + 2,f_nodes + (m*(n-1)+1) - 1,f_nodes + (m*(n-1)+1) - m,f_nodes + (m*(n-1)+1) - 2*m]])
+    else :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + 1) + 1,f_nodes + (m*(n-1)+1) - 1,f_nodes + (m*(n-1)+1) - m,f_nodes + (m*(n-1)+1) - 2*m]])
+
 
     ## now do for last row till last but 2; then do for the last 2 nodes in the row
     for j in range(2, m -2):
       tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + j) -2,f_nodes + (m*(n-1) + j) + 2, f_nodes + (m*(n-1) + j) - m * 1 ,f_nodes + (m*(n-1) +j) - 2*m   ] ])  
     
     #Second last node of last row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 2)- 2,f_nodes + (m*(n-1) + m-2)+1,f_nodes + (m*(n-1) + m-2) - m,f_nodes + (m*(n-1) + m-2) - 2*m]])
+    if m > 3 :
+        tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 2)- 2,f_nodes + (m*(n-1) + m-2)+1,f_nodes + (m*(n-1) + m-2) - m,f_nodes + (m*(n-1) + m-2) - 2*m]])
+    else : 
+        tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 2)- 1,f_nodes + (m*(n-1) + m-2)+1,f_nodes + (m*(n-1) + m-2) - m,f_nodes + (m*(n-1) + m-2) - 2*m]])
+
     #Last node of last row
     tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 1)- 2,f_nodes + (m*(n-1) + m-1)-1,f_nodes + (m*(n-1) + m-1) - m,f_nodes + (m*(n-1) + m-1) - 2*m]])
 
@@ -300,46 +354,50 @@ def folded_torus_gen(f_nodes,n,m):
     return tile, head_node
 
 
-## The following functions handle linkages for the L1 topology. The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages
+## The following functions handle linkages for the L1 topology. 
+## The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages at the positions which are pointed to by the pointers present in the head_pointers
 
 # For ring type L1 topology
 def ring_head_gen(head_nodes,n,final_nodes):
 
-
+    # For the case of n =1 no links have to be added 
+    
+    # Trivial case of 2 tiles
     if n == 2:
         final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])
         final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[0]) ])
 
-
+    # More than 2 tiles
     elif n>2 :
 
-
+        # Add the head node links for the first head node
         final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [n - 1,1 ] ]) 
-
+        # for the other head nodes
         for i in range(1,n-1) :
           final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1,i+1 ] ])  
-
+        # for the last head node
         final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[k]) for k in [ n - 2,0] ])  
 
 
 # For chain type L1 topology
 def chain_head_gen(head_nodes,n,final_nodes):
 
-
+    # no links in case of single tile
+    # for non trivial case
     if n >= 1:
-
+        # for first head node
         final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])  
-
+        # for other head nodes
         for i in range(1, n-1) :
             final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1, i+1 ] ])  
-
+        # for last head node
         final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[n-2])])
 
 
 # For hypercube type L1 topology
 def hypercube_head_gen(head_nodes,final_nodes):
 
-
+    # Adding head linkages based on relative head node positions
     final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [1,3,4 ]])  
     final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [0,2,5 ]])  
     final_nodes[head_nodes[2]].extend(["N{}".format(head_nodes[k]) for k in [1,3,6 ]])  
@@ -418,37 +476,72 @@ def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
 # For folded torus type L1 topology
 def folded_torus_head_gen(head_nodes,n,m,final_nodes):
 
+    if n < 3 or m < 3 :
+        print("Invalid Folded torus dimensions. Each dimension should have atleast 3 nodes, else it cannot be folded")
+        exit()
+
     ########First Row##################
 
     #First Node
     final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [ 2, 1, m, 2*m]])
     #Second Node
-    final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [ 1+ 2, 1 - 1, 1+ m, 1 + 2*m]])
+    if m>3 :
+        final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [ 1+ 2, 1 - 1, 1+ m, 1 + 2*m]])
 
+    else :
+        final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [ 1+ 1, 1 - 1, 1+ m, 1 + 2*m]])
+     
     ## now do for first row till last but 2; then do for last node in the first row
     for j in range(2, m -2):
       final_nodes[head_nodes[j]].extend(["N{}".format(head_nodes[k]) for k in [ j -2, j + 2,  m * 1 + j, m * 2 + j  ] ])  
     
     #Second last node of first row
-    final_nodes[head_nodes[m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m - 2)- 2, (m-2)+1, (m-2)+ m, (m-2)+ 2*m]])
+    if m > 3 :
+        final_nodes[head_nodes[m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m - 2)- 2, (m-2)+1, (m-2)+ m, (m-2)+ 2*m]])
     #Last node of first row
     final_nodes[head_nodes[m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m - 1)- 2, (m-1)-1, (m-1)+ m, (m-1)+ 2*m]])
 
     ########Second Row##################
 
     #First Node
-    final_nodes[head_nodes[m]].extend(["N{}".format(head_nodes[k]) for k in [ m + 2, m + 1, m - m, m + 2*m]])
+    if n > 3 :
+        final_nodes[head_nodes[m]].extend(["N{}".format(head_nodes[k]) for k in [ m + 2, m + 1, m - m, m + 2*m]])
+    else :
+        final_nodes[head_nodes[m]].extend(["N{}".format(head_nodes[k]) for k in [ m + 2, m + 1, m - m, m + m]])
+
     #Second Node
-    final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 2, (m+1) - 1, (m+1)- m, (m+1) + 2*m]])
+    if m > 3 and n > 3 :
+        final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 2, (m+1) - 1, (m+1)- m, (m+1) + 2*m]])
+    elif m > 3 and n == 3 :
+        final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 2, (m+1) - 1, (m+1)- m, (m+1) + m]])
+    elif m == 3 and n > 3 :
+        final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 1, (m+1) - 1, (m+1)- m, (m+1) + 2*m]])
+    elif m == 3 and n == 3 :
+        final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 1, (m+1) - 1, (m+1)- m, (m+1) + m]])
+
+
 
     ## now do for second row till last but 2; then do for last node in the first row
     for j in range(2, m -2):
-      final_nodes[head_nodes[m+j]].extend(["N{}".format(head_nodes[k]) for k in [ (m + j) -2, (m + j) + 2,  (m + j) - m * 1 , (m +j)+ m * 2   ] ])  
+      if n > 3 :
+          final_nodes[head_nodes[m+j]].extend(["N{}".format(head_nodes[k]) for k in [ (m + j) -2, (m + j) + 2,  (m + j) - m * 1 , (m +j)+ m * 2   ] ])  
+      else :
+          final_nodes[head_nodes[m+j]].extend(["N{}".format(head_nodes[k]) for k in [ (m + j) -2, (m + j) + 2,  (m + j) - m * 1 , (m +j)+ m   ] ])  
+
     
     #Second last node of second row
-    final_nodes[head_nodes[m+m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 2)- 2, (m + m-2)+1, (m + m-2) - m, (m + m-2)+ 2*m]])
-    #Last node of first row
-    final_nodes[head_nodes[m+m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 1)- 2, (m + m-1)-1, (m + m-1) - m, (m + m-1)+ 2*m]])
+    if m > 3 and n > 3 :
+        final_nodes[head_nodes[m+m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 2)- 2, (m + m-2)+1, (m + m-2) - m, (m + m-2)+ 2*m]])
+    elif m > 3 and n == 3 :
+        final_nodes[head_nodes[m+m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 2)- 2, (m + m-2)+1, (m + m-2) - m, (m + m-2)+ m]])
+
+
+    #Last node of second row
+    if n > 3 :
+        final_nodes[head_nodes[m+m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 1)- 2, (m + m-1)-1, (m + m-1) - m, (m + m-1)+ 2*m]])
+
+    else :
+        final_nodes[head_nodes[m+m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 1)- 2, (m + m-1)-1, (m + m-1) - m, (m + m-1)+ m]])
 
     ########################################
     ########Other Rows######################
@@ -457,49 +550,68 @@ def folded_torus_head_gen(head_nodes,n,m,final_nodes):
     #then in here, do similarly for first node of the row
       final_nodes[head_nodes[i*m]].extend(["N{}".format(head_nodes[k]) for k in [ m * i  + 2, m * i  + 1,  m * (i-2) ,  m * (i+2) ]])
     #then in here, do similarly for second node of the row
-      final_nodes[head_nodes[i*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + 1 + 2, m * i + 1 - 1,  m * (i-2) + 1 ,  m * (i+2) + 1]])
+      if m > 3 :
+          final_nodes[head_nodes[i*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + 1 + 2, m * i + 1 - 1,  m * (i-2) + 1 ,  m * (i+2) + 1]])
+      else :
+          final_nodes[head_nodes[i*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + 1 + 1, m * i + 1 - 1,  m * (i-2) + 1 ,  m * (i+2) + 1]])
 
       for j in range(2, m -2):
         final_nodes[head_nodes[i*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + j -2, m * i + j + 2,  m * (i-2) + j,  m * (i+2) + j  ] ])  
    
       #then in here, do similarly for second last node of the row
-      final_nodes[head_nodes[i*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-2) -2, m * i + (m-2) +1,  m * (i-2) + (m-2),  m * (i+2) + (m-2)  ] ])
+      if m > 3 :
+          final_nodes[head_nodes[i*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-2) -2, m * i + (m-2) +1,  m * (i-2) + (m-2),  m * (i+2) + (m-2)  ] ])
       #then in here, do similarly for last node of the row
       final_nodes[head_nodes[i*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-1) -2, m * i + (m-1) -1,  m * (i-2) + (m-1),  m * (i+2) + (m-1)  ] ])
 
     ########################################    
     ########Second Last Row##################
 
-    #First Node
-    final_nodes[head_nodes[(n-2)*m]].extend(["N{}".format(head_nodes[k]) for k in [ m*(n-2) + 2, m*(n-2) + 1, m*(n-2) + m, m*(n-2) - 2*m]])
-    #Second Node
-    final_nodes[head_nodes[(n-2)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + 1) + 2, (m*(n-2)+1) - 1, (m*(n-2)+1) + m, (m*(n-2)+1) - 2*m]])
+    if n > 3 :
 
-    ## now do for second last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      final_nodes[head_nodes[(n-2)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + j) -2, (m*(n-2) + j) + 2,  (m*(n-2) + j) + m * 1 , (m*(n-2) +j) - 2*m   ] ])  
+        #First Node
+        final_nodes[head_nodes[(n-2)*m]].extend(["N{}".format(head_nodes[k]) for k in [ m*(n-2) + 2, m*(n-2) + 1, m*(n-2) + m, m*(n-2) - 2*m]])
+        #Second Node
+        if m > 3 :
+            final_nodes[head_nodes[(n-2)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + 1) + 2, (m*(n-2)+1) - 1, (m*(n-2)+1) + m, (m*(n-2)+1) - 2*m]])
+        else :
+            final_nodes[head_nodes[(n-2)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + 1) + 1, (m*(n-2)+1) - 1, (m*(n-2)+1) + m, (m*(n-2)+1) - 2*m]])
+
+        ## now do for second last row till last but 2; then do for the last 2 nodes in the row
+        for j in range(2, m -2):
+          final_nodes[head_nodes[(n-2)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + j) -2, (m*(n-2) + j) + 2,  (m*(n-2) + j) + m * 1 , (m*(n-2) +j) - 2*m   ] ])  
     
-    #Second last node of second last row
-    final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 2)- 2, (m*(n-2) + m-2)+1, (m*(n-2) + m-2) + m, (m*(n-2) + m-2) - 2*m]])
-    #Last node of first row
-    final_nodes[head_nodes[(n-2)*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 1)- 2, (m*(n-2) + m-1)-1, (m*(n-2) + m-1) + m, (m*(n-2) + m-1) - 2*m]])
+        #Second last node of second last row
+        if m > 3 :
+            final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 2)- 2, (m*(n-2) + m-2)+1, (m*(n-2) + m-2) + m, (m*(n-2) + m-2) - 2*m]])
+        else :
+            final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 2)- 1, (m*(n-2) + m-2)+1, (m*(n-2) + m-2) + m, (m*(n-2) + m-2) - 2*m]])
+
+        #Last node of first row
+        final_nodes[head_nodes[(n-2)*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 1)- 2, (m*(n-2) + m-1)-1, (m*(n-2) + m-1) + m, (m*(n-2) + m-1) - 2*m]])
 
     ########Last Row##################
 
     #First Node
     final_nodes[head_nodes[(n-1)*m]].extend(["N{}".format(head_nodes[k]) for k in [ m*(n-1) + 2, m*(n-1) + 1, m*(n-1) - m, m*(n-1) - 2*m]])
     #Second Node
-    final_nodes[head_nodes[(n-1)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + 1) + 2,(m*(n-1)+1) - 1, (m*(n-1)+1) - m, (m*(n-1)+1) - 2*m]])
+    if m > 3 :
+        final_nodes[head_nodes[(n-1)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + 1) + 2,(m*(n-1)+1) - 1, (m*(n-1)+1) - m, (m*(n-1)+1) - 2*m]])
+    else :
+        final_nodes[head_nodes[(n-1)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + 1) + 1,(m*(n-1)+1) - 1, (m*(n-1)+1) - m, (m*(n-1)+1) - 2*m]])
 
     ## now do for last row till last but 2; then do for the last 2 nodes in the row
     for j in range(2, m -2):
       final_nodes[head_nodes[(n-1)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + j) -2, (m*(n-1) + j) + 2,  (m*(n-1) + j) - m * 1 , (m*(n-1) +j) - 2*m   ] ])  
     
     #Second last node of last row
-    final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 2)- 2, (m*(n-1) + m-2)+1, (m*(n-1) + m-2) - m, (m*(n-1) + m-2) - 2*m]])
+    if m > 3:
+        final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 2)- 2, (m*(n-1) + m-2)+1, (m*(n-1) + m-2) - m, (m*(n-1) + m-2) - 2*m]])
+    else:
+        final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 2)- 1, (m*(n-1) + m-2)+1, (m*(n-1) + m-2) - m, (m*(n-1) + m-2) - 2*m]])
+
     #Last node of last row
     final_nodes[head_nodes[(n-1)*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 1)- 2, (m*(n-1) + m-1)-1, (m*(n-1) + m-1) - m, (m*(n-1) + m-1) - 2*m]])
-
 
 
 
@@ -553,7 +665,7 @@ for tile_i in L2:
   m = int(m)
   f_nodes = len(final_nodes)
 
-  ## The linkages received from the tiles are added extended into the overall final_nodes list
+  ## The links received from the tiles are added extended into the overall final_nodes list. Now, the final_nodes list effectively contains list of nodes connected corresponding to each node
   ## The head node pointers received from each tile is also appended to the head_nodes list
   if network_type == "R":
     tile, head_node = ring_gen(f_nodes,n)  # Ring generator
@@ -588,31 +700,33 @@ for tile_i in L2:
 
   else :
     print("Invalid network type")
+    exit()
 
 
 
-## Calling the functions to Add the head nodes links
+## Calling the functions to Add the head nodes links to the corresponding nodes in the final_nodes list
 
 if L1_network_type == "R":
-    ring_head_gen(head_nodes,L1_n,final_nodes)
+    ring_head_gen(head_nodes,L1_n,final_nodes)  # Ring type L1 topology
     
 elif L1_network_type == "C":
-    chain_head_gen(head_nodes,L1_n,final_nodes)
+    chain_head_gen(head_nodes,L1_n,final_nodes)  # Chain type L1 topology
     
 elif L1_network_type == "M":
-    mesh_head_gen(head_nodes,L1_n,L1_m,final_nodes)
+    mesh_head_gen(head_nodes,L1_n,L1_m,final_nodes) # Mesh type L1 topology
     
 elif L1_network_type == "B":
-    butterfly_head_gen(head_nodes,L1_n,final_nodes,final_switches)
+    butterfly_head_gen(head_nodes,L1_n,final_nodes,final_switches) # Butterfly type L1 topology
     
 elif L1_network_type == "F":
-    folded_torus_head_gen(head_nodes,L1_n,L1_m,final_nodes)
+    folded_torus_head_gen(head_nodes,L1_n,L1_m,final_nodes)  # Folded torus type L1 topology
 
 elif L1_network_type == "H":
-    hypercube_head_gen(head_nodes,final_nodes)
+    hypercube_head_gen(head_nodes,final_nodes) # Hypercube type L1 topology
     
 else :
     print("Invalid network type")
+    exit()
 
 
 print_func(final_nodes, final_switches)
