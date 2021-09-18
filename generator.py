@@ -163,15 +163,27 @@ def mesh_gen(f_nodes,n,m):
 
 def butterfly_gen(f_nodes,n):
     tile = []
-    switches = []
+    switches = {}
+
+    # switch names: S <num1> w <num2> w <num3> :
+    #   num1 identifies the subtopology in which the switch exists
+    #   num2 identifies the stage in the butterfly
+    #   num3 identifies the switch in the stage
 
     # add nodes ("Node"s)
     n_stages = int(log2(n))
     # first stage
     for i in range(0,n):
-      tile.append(["S{}w{}w{}".format(f_nodes,0, int(i/2))])
+      tile.append(["S{}w{}w{}".format(f_nodes,0,int(i/2))])
     
     head_node = f_nodes + int(n/2)
+
+    # initialize switches in dictionary
+    # for each stage
+    for k in range(0, n_stages):
+      # for each switch in stage
+      for i in range(0, int(n / 2)):
+        switches['S{}w{}w{}'.format(f_nodes,k,i)] = [];
 
     # add switches
     for k in range(1, n_stages):
@@ -182,11 +194,11 @@ def butterfly_gen(f_nodes,n):
         #   both in the next layer k
         #   first one is to the direct next one,
         #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k) from RIGHT
-        switches.append(["S{}w{}w{}".format(f_nodes,k,i), "S{}w{}w{}".format(f_nodes,k,(i ^ (2**(n_stages - k - 1))))])
+        switches['S{}w{}w{}'.format(f_nodes,k-1,i)] = ["S{}w{}w{}".format(f_nodes,k,i), "S{}w{}w{}".format(f_nodes,k,(i ^ (2**(n_stages - k - 1))))]
 
     # last stage (final layer of switches --> output nodes)
     for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
-      switches.append(["N{}".format(f_nodes + n + i*2), "N{}".format(f_nodes + n + i*2 + 1)])
+      switches['S{}w{}w{}'.format(f_nodes,n_stages-1,i)] = ["N{}".format(f_nodes + n + i*2), "N{}".format(f_nodes + n + i*2 + 1)]
     
     # output nodes are connected to... nothing
     for i in range(0, n):
@@ -379,6 +391,15 @@ def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
       # add the link to these new switches in the head nodes which will act as input
       final_nodes[head_nodes[i]].extend(["S{}w{}".format(0, int(i/2))])
 
+    # switch names: S <num1> w <num2> :
+    #   num1 identifies the stage in the butterfly
+    #   num2 identifies the switch in the stage
+    # note this automatically differentiates these switches from inner topology switches
+
+    for k in range(0, n_stages):
+      for i in range(0, int(n / 2)):
+        final_switches['S{}w{}'.format(0,i)] = []
+
     # add switches
     for k in range(1, n_stages):
       # each stage has (n/2) switches in our butterfly
@@ -388,11 +409,11 @@ def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
         #   both in the next layer k
         #   first one is to the direct next one,
         #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k - 1) from RIGHT
-        final_switches.append(["S{}w{}".format(k,i), "S{}w{}".format(k,(i ^ (2**(n_stages - k - 1))))])
+        final_switches['S{}w{}'.format(k-1,i)] = ["S{}w{}".format(k,i), "S{}w{}".format(k,(i ^ (2**(n_stages - k - 1))))]
 
     # last stage (final layer of switches --> output nodes)
     for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
-      final_switches.append(["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])])
+      final_switches['S{}w{}'.format(n_stages-1,i)] = ["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])]
     
 # For folded torus type L1 topology
 def folded_torus_head_gen(head_nodes,n,m,final_nodes):
@@ -494,6 +515,13 @@ def print_func(final_nodes, final_switches):
     for link in range(0,len(final_nodes[node_id])):
       print("L({}):{}".format(link,final_nodes[node_id][link]),file=file3)  #Print each link as per the final_nodes file
 
+  for switch_id in final_switches:
+    print("NodeID: {}".format(switch_id), file=file3)
+    print("Links : {}".format(len(final_switches[switch_id])), file=file3)
+
+    for link in range(len(final_switches[switch_id])):
+      print("L({}):{}".format(link, final_switches[switch_id][link]), file=file3)
+
 
 ### Start of parsing ###
 
@@ -511,7 +539,7 @@ L1_m = int(L1_m)
 #Define final lists
 final_nodes = []     # Stores the links for all the nodes
 head_nodes = []      # Stores pointers to head nodes
-final_switches = []  # Stores the switches
+final_switches = {}  # Stores the switches
 
 
 
@@ -545,7 +573,7 @@ for tile_i in L2:
   elif network_type == "B":
     tile, head_node, switches = butterfly_gen(f_nodes,n,m) # Butterfly generator
     final_nodes.extend(tile)
-    final_switches.extend(switches)
+    final_switches.update(switches)
     head_nodes.append(head_node)
 
   elif network_type == "F":
