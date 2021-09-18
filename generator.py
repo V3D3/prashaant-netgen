@@ -99,7 +99,7 @@ def butterfly_gen(f_nodes,n):
     switches = []
 
     # add nodes ("Node"s)
-    n_stages = log2(n)
+    n_stages = int(log2(n))
     # first stage
     for i in range(0,n):
       tile.append(["S{}w{}w{}".format(f_nodes,0, int(i/2))])
@@ -118,7 +118,7 @@ def butterfly_gen(f_nodes,n):
         switches.append(["S{}w{}w{}".format(f_nodes,k,i), "S{}w{}w{}".format(f_nodes,k,(i ^ (2**(n_stages - k - 1))))])
 
     # last stage (final layer of switches --> output nodes)
-    for i in range(0, n/2): # note: n guaranteed to be divisble by 2
+    for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
       switches.append(["N{}".format(f_nodes + n + i*2), "N{}".format(f_nodes + n + i*2 + 1)])
     
     # output nodes are connected to... nothing
@@ -289,7 +289,7 @@ def mesh_head_gen(head_nodes,n,m,final_nodes):
 
 
 def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
-    n_stages = log2(n)
+    n_stages = int(log2(n))
     for i in range(0,n):
       # add the link to these new switches in the head nodes which will act as input
       final_nodes[head_nodes[i]].extend(["S{}w{}".format(0, int(i/2))])
@@ -306,10 +306,10 @@ def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
         final_switches.append(["S{}w{}".format(k,i), "S{}w{}".format(k,(i ^ (2**(n_stages - k - 1))))])
 
     # last stage (final layer of switches --> output nodes)
-    for i in range(0, n/2): # note: n guaranteed to be divisble by 2
+    for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
       final_switches.append(["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])])
     
-    
+
 def folded_torus_head_gen(head_nodes,n,m,final_nodes):
 
     ########First Row##################
@@ -399,7 +399,7 @@ def folded_torus_head_gen(head_nodes,n,m,final_nodes):
 
 
 
-def print_func(final_nodes):
+def print_func(final_nodes, final_switches):
   file3 = open(r"Network.txt","w")
 
   for node_id in range(0,len(final_nodes)):
@@ -497,5 +497,5 @@ else :
     print("Invalid network type")
 
 
-print_func(final_nodes)
+print_func(final_nodes, final_switches)
 
