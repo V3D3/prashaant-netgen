@@ -1,5 +1,11 @@
 # Visualizer for generated network
 
+####
+# Requires: networkx, pygraphviz, and runs in an IPython environment (jupyter)
+# Usage: run once to obtain a diagram of the network for given topology files (network.txt is updated)
+#        and a DOT format output to visualize using other applications (eg. qvge / gephi / etc)
+####
+
 ###################################
 ######      DEPENDENCIES     ######
 ###################################
@@ -7,7 +13,10 @@
 # for running executable
 import subprocess
 # for representation and graph operations
+# requires networkx
 import networkx as nx
+# for drawing
+import matplotlib.pyplot as plt
 # for easy errors
 from os   import error
 
@@ -64,6 +73,8 @@ def parseNetwork(s):
     for i in s.split('\n'):
         # Line style: NodeID: <identifier>
         # Action:     Add a node
+        if len(i) == 0:
+            continue
         if i[0] == 'N':
             # sanity check before starting with a new node
             if edgecount > 0:
@@ -86,7 +97,7 @@ def parseNetwork(s):
         # Action:     Add a directed edge
         elif i[1] == '(':
             # add a link
-            G.add_edge(currnode, i.split(':')[1][1:])
+            G.add_edge(currnode, i.split(':')[1])
             # one less link remaining
             edgecount -= 1
 
@@ -118,4 +129,6 @@ subprocess.run(["./generator.py"])
 network1 = parseNetwork(fileStr("Network.txt"))
 
 # draw the graph object (require an IPython environment)
-nx.draw(network1)
+nx.draw_shell(network1, with_labels=True)
+# output in DOT format (requires pygraphviz)
+nx.drawing.nx_agraph.write_dot(network1, "Out.txt")
