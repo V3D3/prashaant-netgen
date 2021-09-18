@@ -75,6 +75,10 @@ def hypercube_gen(f_nodes):
 
 def mesh_gen(f_nodes,n,m):
 
+    if n < 2 or m < 2:
+        print("Invalid Mesh dimensions. A mesh of dimension 1 is a chain. Please correct the L2 topology")
+        exit()
+    
     tile = []
 
     tile.append(["N{}".format(k) for k in [f_nodes + 1,f_nodes + m]])
@@ -285,6 +289,10 @@ def hypercube_head_gen(head_nodes,final_nodes):
 
 def mesh_head_gen(head_nodes,n,m,final_nodes):
 
+    if n < 2 or m < 2:
+        print("Invalid Mesh dimensions. A mesh of dimension 1 is a chain. Please correct the L2 topology")
+        exit()
+    
 
     final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [1, m]])
     ## now do for first row till second last; then do for last node in the first row
