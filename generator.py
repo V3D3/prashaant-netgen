@@ -8,14 +8,20 @@ def chain_gen(f_nodes,n):
 
     tile = []
 
-    tile.append(["N{}".format(f_nodes + 1) ])  
+    if n == 1:
+        tile.append([])
+        head_node = f_nodes
 
-    for i in range(1, n-1) :
-      tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+    else :
 
-    tile.append(["N{}".format(f_nodes + n-2)])
+        tile.append(["N{}".format(f_nodes + 1) ])  
 
-    head_node = f_nodes + int((n)/2)
+        for i in range(1, n-1) :
+            tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+
+            tile.append(["N{}".format(f_nodes + n-2)])
+
+            head_node = f_nodes + int((n)/2)
 
 
     return tile, head_node
@@ -26,12 +32,21 @@ def ring_gen(f_nodes,n):
 
     tile = []
 
-    tile.append(["N{}".format(f_nodes + k) for k in [ n - 1,1 ] ]) 
-    for i in range(1,n-1) :
-      tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+    if n == 1:
+        tile.append([])
 
-    tile.append(["N{}".format(f_nodes + k) for k in [n - 2,0] ])  
+    if n == 2:
+        tile.append(["N{}".format(f_nodes + 1) ])
+        tile.append(["N{}".format(f_nodes) ])
 
+
+    else :
+
+        tile.append(["N{}".format(f_nodes + k) for k in [ n - 1,1 ] ]) 
+        for i in range(1,n-1) :
+          tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+
+        tile.append(["N{}".format(f_nodes + k) for k in [n - 2,0] ])  
 
     head_node = f_nodes
 
@@ -222,25 +237,34 @@ def folded_torus_gen(f_nodes,n,m):
 def ring_head_gen(head_nodes,n,final_nodes):
 
 
+    if n == 2:
+        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])
+        final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[0]) ])
 
-    final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [n - 1,1 ] ]) 
 
-    for i in range(1,n-1) :
-      final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1,i+1 ] ])  
+    elif n>2 :
 
-    final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[k]) for k in [ n - 2,0] ])  
+
+        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [n - 1,1 ] ]) 
+
+        for i in range(1,n-1) :
+          final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1,i+1 ] ])  
+
+        final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[k]) for k in [ n - 2,0] ])  
 
 
 
 def chain_head_gen(head_nodes,n,final_nodes):
 
 
-    final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])  
+    if n >= 1:
 
-    for i in range(1, n-1) :
-      final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1, i+1 ] ])  
+        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])  
 
-    final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[n-2])])
+        for i in range(1, n-1) :
+            final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1, i+1 ] ])  
+
+        final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[n-2])])
 
 
 
@@ -418,9 +442,9 @@ file2 = open(r"L2Topology.txt","r")
 L1 = file1.read()
 L2 = file2.readlines()
 
-L1_network_type = L1[0]
-L1_n= int(L1[2])
-L1_m = int(L1[4])
+L1_network_type, L1_n, L1_m = L1.split(",")
+L1_n = int(L1_n)
+L1_m = int(L1_m)
 
 
 final_nodes = []
@@ -432,9 +456,9 @@ final_switches = []
 #Adding the nodes and linking as per the tiles in L2 topology
 for tile_i in L2:
 
-  network_type = tile_i[0]
-  n = int(tile_i[2])
-  m = int(tile_i[4])
+  network_type, n, m = tile_i.split(",")
+  n = int(n)
+  m = int(m)
   f_nodes = len(final_nodes)
 
   if network_type == "R":
