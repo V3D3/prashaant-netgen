@@ -94,7 +94,6 @@ def mesh_gen(f_nodes,n,m):
 
 
 def butterfly_gen(f_nodes,n):
-
     tile = []
     switches = []
 
@@ -119,7 +118,11 @@ def butterfly_gen(f_nodes,n):
 
     # last stage (final layer of switches --> output nodes)
     for i in range(0, n/2): # note: n guaranteed to be divisble by 2
-      switches.append(["N{}".format(i*2), "N{}".format(i*2 + 1)])
+      switches.append(["N{}".format(f_nodes + n + i*2), "N{}".format(f_nodes + n + i*2 + 1)])
+    
+    # output nodes are connected to... nothing
+    for i in range(0, n):
+      tile.append([])
 
     return tile, head_node, switches
 
