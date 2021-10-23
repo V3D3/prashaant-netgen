@@ -69,7 +69,7 @@ class Node:
         # string id for this node, uniquely identifies it
         self.id = self.generateID(isHead, headID, inClass, inID, isSwitch)
       
-    @classmethod
+    @staticmethod
     def generateID(isHead, headID, inClass, inID, isSwitch = False):
       if(isHead):
         return 'O' + headID + 'Z' + inID
@@ -136,15 +136,20 @@ def chain_gen(f_nodes,n,id):
 
         #Add edges between middle nodes
         for i in range(1, n-1):
+          myID = Node.generateID(False, id, thisClass, str(id))
+
           leftID = Node.generateID(False, id, thisClass, str(i - 1))
+          #If this leftID does not exist in there, we're looking at the head node to the left
           if(thisGraph.nodes.get(leftID) == None):
             leftID = Node.generateID(True, id, thisClass, str(i - 1))
 
           rightID = Node.generateID(False, id, thisClass, str(i + 1))
+          #Likewise
           if(thisGraph.nodes.get(leftID) == None):
             rightID = Node.generateID(True, id, thisClass, str(i + 1))
 
-          thisGraph.add_edge(leftID, rightID)
+          thisGraph.add_edge(leftID, myID)
+          thisGraph.add_edge(rightID, myID)
 
         #Continuing for the other nodes
         for i in range(1, n-1) :
