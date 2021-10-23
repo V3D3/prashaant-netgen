@@ -112,25 +112,25 @@ innerTopologies = {}
 # Function to generate the tile for a chain type L2 connection
 # f_nodes in the pointer to the first node in the particular tile in the final_nodes list
 # n is the length of the chain
-def chain_gen(f_nodes,n,id):
+def chain_gen(n, id):
     thisClass = 'C'
     thisParams = (n, )
     thisGraph = nx.Graph();
-    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+    thisTopology = Topology(False, '', thisClass, thisParams, thisGraph);
 
     # List which stores a list of nodes connected to each node in the tile
     # Trivial case of one node. It isn't connected to anything
     if n == 1:
-        head_node = f_nodes  # Head node is the pointer to the head node, as in the final_nodes list
-        node = Node(True, id, 'C', '')
+        node = Node(True, id, thisClass, '')
         thisGraph.add_node(node.id, node)
+        thisTopology.headID = node.id
     else :
-
         #Add nodes
         for i in range(0, n):
           isHead = False
           if(i == int(n/2)):
             isHead = True
+            thisTopology.headID = Node.generateID(True, id, thisClass, str(i))
           cnode = Node(isHead, id, thisClass, str(i))
           thisGraph.add_node(cnode.id, cnode)
 
@@ -151,14 +151,16 @@ def chain_gen(f_nodes,n,id):
           thisGraph.add_edge(leftID, myID)
           thisGraph.add_edge(rightID, myID)
 
-        #Continuing for the other nodes
-        for i in range(1, n-1) :
-            tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+        #For leftmost node
+        leftmostID = Node.generateID(False, id, thisClass, 0)
+        #Rightmost ID changes according to it being the head node
+        rightID = Node.generateID((int(n/2) == 1), id, thisClass, 1)
+        thisGraph.add_edge(leftmostID, rightID)
 
-        #Adding the nodes linked ot the rightmost node in a chain. Connected to only one node    
-        tile.append(["N{}".format(f_nodes + n-2)])
-
-        head_node = f_nodes + int((n)/2) # The center node is the head node
+        #For rightmost node
+        rightmostID = Node.generateID((int(n/2) == (n-1)), id, thisClass, n-1)
+        leftID = Node.generateID((int(n/2) == (n-2)), id, thisClass, n-2)
+        thisGraph.add_edge(rightmostID, leftID)
 
     #Returning the tile and pointer to head_node
     innerTopologies[id] = thisTopology
@@ -166,66 +168,87 @@ def chain_gen(f_nodes,n,id):
 
 # Function to generate the tile for a ring type L2 connection
 # n is the length of the ring
-def ring_gen(f_nodes,n):
-
-    tile = []
+def ring_gen(n, id):
+    thisClass = 'R'
+    thisParams = (n, )
+    thisGraph = nx.Graph();
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+    
     #Trivial case of one node
     if n == 1:
-        tile.append([])
+      node = Node(True, id, thisClass, '')
+      thisGraph.add_node(node.id, node)
+      thisTopology.headID = node.id
     #Ring with only two nodes. The nodes are connected to each other
     if n == 2:
-        tile.append(["N{}".format(f_nodes + 1) ])
-        tile.append(["N{}".format(f_nodes) ])
+      #Generate and add the two nodes
+      node1 = Node(False, id, thisClass, '0')
+      node2 = Node(True, id, thisClass, '1')
+      thisGraph.add_node(node1.id, node1)
+      thisGraph.add_node(node2.id, node2)
+      thisTopology.headID = node2.id
+      #Link them
+      thisGraph.add_edge(node1.id, node2.id)
 
     #Non trivial case
     else :
-        #Circularly connecting the nodes. The nodes on either ends are connected to the ones on the other end
-        tile.append(["N{}".format(f_nodes + k) for k in [ n - 1,1 ] ]) 
-        for i in range(1,n-1) :
-          tile.append(["N{}".format(f_nodes + k) for k in [i-1, i+1 ] ])  
+      #Adding nodes, P1: headnode
+      headnode = Node.generateID(True, id, thisClass, '0')
+      thisGraph.add_node(headnode.id, headnode)
+      thisTopology.headID = headnode.id
+      #Adding nodes, P2: others
+      for i in range(1, n):
+        cnode = Node(False, id, thisClass, str(i))
+        thisGraph.add_node(cnode.id, cnode)
 
-        tile.append(["N{}".format(f_nodes + k) for k in [n - 2,0] ])  
+      #Adding links except to head
+      for i in range(1, n-1):
+        myID = Node.generateID(False, id, thisClass, str(i))
+        nextID = Node.generateID(False, id, thisClass, str(i + 1))
+        thisGraph.add_edge(myID, nextID)
+      #Adding links to head
+      thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
+      thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
 
-    head_node = f_nodes  #Pointer to the head node, i.e., the first node in the chain
-
-    return tile, head_node  #Returning the tile and head_node
+    innerTopologies[id] = thisTopology
 
 
 
 # Function to generate the tile for a hypercube type L2 connection
 # Dimension is forced as 3 (8 nodes)
 # f_nodes is the pointer to the first node in the Hypercube
-def hypercube_gen(f_nodes):
-
-    tile = []
+def hypercube_gen(id):
+    thisClass = 'H'
+    thisParams = None
+    thisGraph = nx.Graph();
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
     
-    #Adding links based on the relative position of the nodes. The nodes are numbered starting from one face and then the opposite face
+    #Create and add nodes
+    nodes = [Node(True, id, thisClass, 0)]
+    thisGraph.add_node(nodes[0].id, nodes[0])
 
-    tile.append(["N{}".format(f_nodes + k) for k in [1,3,4 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [0,2,5 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [1,3,6 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [0,2,7 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [0,5,7 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [1,4,6 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [2,5,7 ]])  
-    tile.append(["N{}".format(f_nodes + k) for k in [3,6,4 ]])  
+    for i in range(1, 8):
+      nodes.append(Node(False, id, thisClass, i))
+      thisGraph.add_node(nodes[i].id, nodes[i])
 
-    head_node = f_nodes  #Pointer to the head node
+    for i in range(8):
+      #Edges by inverting 1 bit in each position
+      #3 edges for our 3d hypercube
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id)
 
-    return tile, head_node
+    innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a mesh type L2 connection
 # Dimension of n x m (n rows and m columns)
 # f_nodes is the pointer to the first node in the Hypercube
-
-def mesh_gen(f_nodes,n,m):
-
-    if n < 2 or m < 2:
-        print("Invalid Mesh dimensions. A mesh of dimension 1 is a chain. Please correct the L2 topology")
-        exit()
-    
-    tile = []
+def mesh_gen(n,m):
+    thisClass = 'M'
+    thisParams = (n, m)
+    thisGraph = nx.Graph();
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
     #We need to separately handle the nodes on the perimeter as these have fewer than 4 linkages
    
