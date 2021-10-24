@@ -72,9 +72,9 @@ class Node:
     @staticmethod
     def generateID(isHead, headID, inClass, inID, isSwitch = False):
       if(isHead):
-        return 'O' + headID + 'Z' + inID
+        return 'O' + headID + DELIMITER + inID
       else:
-        return 'I' + headID + 'Z' + inID
+        return 'I' + headID + DELIMITER + inID
 
 class Topology:
   def __init__(self, isOuter, headID, topoClass, topoParams, topoGraph):
@@ -99,6 +99,8 @@ class Topology:
 outerTopology = None
 # This dictionary stores inner topology objects
 innerTopologies = {}
+# The delimiter in string IDs
+DELIMITER = 'Z'
 
 # The list final_nodes stores all the connections to a particular nodes (a list of list)
 # The NodeID for each node is N<i>, where <i> is its position in the final_nodes list
@@ -250,94 +252,137 @@ def mesh_gen(n,m):
     thisGraph = nx.Graph();
     thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
-    #We need to separately handle the nodes on the perimeter as these have fewer than 4 linkages
-   
-    ####First Row ####
-    #Handling the first node; which is connected only to the one on the right and the one in the next row
-    tile.append(["N{}".format(k) for k in [f_nodes + 1,f_nodes + m]])
-    ## now do for first row till second last
-    for j in range(1, m -1):
-      tile.append(["N{}".format(k) for k in [f_nodes + j -1,f_nodes + j + 1, f_nodes + m * 1 + j  ] ])  
-    # Now the last node in the first node
-    tile.append(["N{}".format(k) for k in [f_nodes + m - 2,f_nodes + m + m -1]])
+    def checkHead(ix, jx):
+      return (ix == int(n/2)) and (jx == (int(m/2)))
 
-    ### Second row onwards ####
-    for i in range(1, n-1) :
-    #then in here, do similarly for first node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i  + 1, f_nodes + m * (i-1) , f_nodes + m * (i+1) ]])
-      #For the nodes completely inside
-      for j in range(1, m -1):
-        tile.append(["N{}".format(k) for k in [f_nodes + m * i + j -1,f_nodes + m * i + j + 1, f_nodes + m * (i-1) + j, f_nodes + m * (i+1) + j  ] ])  
-   
-      #then in here, do similarly for last node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-1) -1, f_nodes + m * (i-1) + (m-1), f_nodes + m * (i+1) + (m-1)  ] ])
+    #Add nodes
+    for i in range(n):
+      for j in range(m):
+        isHead = checkHead(i, j)
+        if(isHead):
+          thisTopology.headID = Node.generateID(True, id, thisClass, str(i) + DELIMITER + str(j))
+        cnode = Node(isHead, id, thisClass, str(i) + DELIMITER + str(j))
+        thisGraph.add_node(cnode.id, cnode)
 
-    ### Last row ####    
-    #then do for the last row like the first row
-    tile.append(["N{}".format(k) for k in [f_nodes + m * (n-1)  + 1, f_nodes + m * ((n-1)-1)]])    
-    for j in range(1, m -1):
-      tile.append(["N{}".format(k) for k in [f_nodes + m * (n-1) + j -1,f_nodes + m * (n-1) + j + 1, f_nodes + m * ((n-1)-1) + j  ] ])  
+    #Checks if node is valid
+    def checkNode(ix, jx):
+      if(ix < 0 or jx < 0):
+        return False
+      if(ix >= n or jx >= m):
+        return False
+      return True
 
-    tile.append(["N{}".format(k) for k in [f_nodes + m * (n-1) + (m-1) -1, f_nodes + m * ((n-1)-1) + (m-1)  ] ])
-   
+    #Safely adds edges - if dest node exists, and accounting for headID
+    def addEdgeSafe(isrc, jsrc, idest, jdest):
+      if(not checkNode(idest, jdest)):
+        return
+      srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
+      destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+      thisGraph.add_edge(srcID, destID)
+
+    #Add edges
+    for i in range(n):
+      for j in range(m):
+        addEdgeSafe(i, j, i - 1, j)
+        addEdgeSafe(i, j, i + 1, j)
+        addEdgeSafe(i, j, i, j - 1)
+        addEdgeSafe(i, j, i, j + 1)
+
+    innerTopologies[id] = thisTopology
 
 
-    head_node = f_nodes + int(n/2)*m +  int((m)/2);
+# Function to generate the tile for a butterfly type L2 connection
+def butterfly_gen(n):
+    thisClass = 'B'
+    thisParams = (n, )
+    thisGraph = nx.Graph();
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
+    # node internal IDs: <num1> :
+    #   num1 identifies the node index
+    # switch internal IDs: <num1> Z <num2> :
+    #   num1 identifies the stage in the butterfly
+    #   num2 identifies the switch in the stage
 
+    def checkHead(stage, index):
+      if(stage == 0 and index == 0):
+        thisTopology.headID = Node.generateID(True, id, thisClass, str(0))
+        return True
+      return False
 
-    return tile, head_node
-
-
-def butterfly_gen(f_nodes,n):
-    tile = []
-    switches = {}
-
-    # switch names: S <num1> w <num2> w <num3> :
-    #   num1 identifies the subtopology in which the switch exists
-    #   num2 identifies the stage in the butterfly
-    #   num3 identifies the switch in the stage
-
-    # add nodes ("Node"s)
+    #n/2 nodes on left, n/2 on right, n/4 switches in each stage
+    #hence, log2(n/4) = log2(n) - 2 layers of switches
+    #and 2 layers of nodes, total log2(n) layers
     n_stages = int(log2(n))
-    # first stage
-    for i in range(0,n):
-      tile.append(["S{}w{}w{}".format(f_nodes,0,int(i/2))])
-    
-    head_node = f_nodes + int(n/2)
 
-    # initialize switches in dictionary
-    # for each stage
-    for k in range(0, n_stages):
-      # for each switch in stage
-      for i in range(0, int(n / 2)):
-        switches['S{}w{}w{}'.format(f_nodes,k,i)] = [];
-
-    # add switches
-    for k in range(1, n_stages):
-      # each stage has (n/2) switches in our butterfly
-      for i in range(0, int(n/2)):
-        # current switch is (k-1, i)
-        # it should be linked to two switches:
-        #   both in the next layer k
-        #   first one is to the direct next one,
-        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k) from RIGHT
-        switches['S{}w{}w{}'.format(f_nodes,k-1,i)] = ["S{}w{}w{}".format(f_nodes,k,i), "S{}w{}w{}".format(f_nodes,k,(i ^ (2**(n_stages - k - 1))))]
-
-    # last stage (final layer of switches --> output nodes)
-    for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
-      switches['S{}w{}w{}'.format(f_nodes,n_stages-1,i)] = ["N{}".format(f_nodes + n + i*2), "N{}".format(f_nodes + n + i*2 + 1)]
-    
-    # output nodes are connected to... nothing
+    #Add nodes
     for i in range(0, n):
-      tile.append([])
+      cnode = Node(checkHead(0 if n < int(n/2) else n_stages - 1, i % (n/2)),
+                   id, thisClass, str(i))
+      thisGraph.add_node(cnode.id, cnode)
+    #Add switches
+    for i in range(1, n_stages - 1):
+      for j in range(int(n/4)):
+        cswitch = Node(False, id, thisClass, str(i) + DELIMITER + str(j), True)
+        thisGraph.add_node(cswitch.id, cswitch)
+    
+    #Add edges from input to first switch layer
+    for i in range(0, int(n/2)):
+      nodeID = Node.generateID(checkHead(0, i), id, thisClass, str(i))
+      switchID = Node.generateID(False, id, thisClass, str(1) + DELIMITER + str(int(i/2)), True)
+      thisGraph.add_edge(nodeID, switchID)
+    
+    #Add edges from last switch layer to output
+    for i in range(0, int(n/4)):
+      switchID = Node.generateID(False, id, thisClass, str(n_stages - 2) + DELIMITER + str(i), True)
+      nodeID1 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i)))
+      nodeID2 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i + 1)))
+      
+      thisGraph.add_edge(switchID, nodeID1)
+      thisGraph.add_edge(switchID, nodeID2)
 
-    return tile, head_node, switches
+    def nextSwitch(current, stage):
+      bit = 1 << (stage - 1)
+      return bit ^ current
 
-def folded_torus_gen(f_nodes,n,m):
+    #Add edges between switches in the inner layers
+    for i in range(1, n_stages - 2):
+      for j in range(0, int(n/4)):
+        myID = Node.generateID(False, id, thisClass, str(i) + DELIMITER + str(j), True)
+        nextIDDirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(j), True)
+        nextIDIndirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(nextSwitch(j, i)), True)
+        
+        thisGraph.add_edge(myID, nextIDDirect)
+        thisGraph.add_edge(myID, nextIDIndirect)
 
-    tile = []
+    innerTopologies[id] = thisTopology
 
+
+# Function to generate the tile for a folded torus type L2 connection
+# Dimension of n x m (n rows and m columns)
+def folded_torus_gen(n, m, id):
+    thisClass = 'F'
+    thisParams = (n, m)
+    thisGraph = nx.Graph();
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+
+    # Node ID: <num1> <DELIM> <num2>
+    #   num1 -> row of the node
+    #   num2 -> column of the node
+
+    def checkHead(i, j):
+      if(i == 0 and j == 0):
+        return True
+      return False
+
+    #Add nodes
+    for i in range(n):
+      for j in range(m):
+        cnode = Node(checkHead(i, j), id, thisClass, str(i) + DELIMITER + str(j))
+        thisGraph.add_node(cnode.id, cnode)
+
+    #Add edges in rows
+    for j in range(m):
     # The logic for folded torus is that each node is connected to a node which is 2 columns away or 2 rows away. Incase of corner nodes, they are connected to the adjacent nodes
     # Owing to this, we need to handle the nodes running along a boundary of 2 from all sides separately, as these won't have 2 nodes on all its sides 
     ########First Row##################
