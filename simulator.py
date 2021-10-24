@@ -725,7 +725,109 @@ def route_mesh(src:Node, dest:Node, outside:bool):
       nextid = Node.generateID(True, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
   
   return nextid, str(vcid)
+
+def route_folded_torus(src:Node, dest:Node, outside:bool):
+  idsrc = src.headID if outside else src.inID
+  iddest = dest.headID if outside else dest.inID
+
+  isrc, jsrc = list(map(lambda x : int(x), idsrc.split(DELIMITER)))
+  idest, jdest = list(map(lambda x : int(x), iddest.split(DELIMITER)))
+
+  srcTopo = outerTopology if outside else (innerTopologies[src.headID])
+
+  nextid = ''
+  vcid = 4*int(src.isHead)
+
+  n, m = srcTopo.topoParams
+  if(isrc < idest):
+    if(idest - isrc > (isrc + n - idest)):
+      isrc -= 1; vcid += 2
+    else:
+      isrc += 1
+  elif(jsrc < jdest):
+    if(jdest - jsrc > (jsrc + m - jdest)):
+      jsrc -= 1; vcid += 3
+    else:
+      jsrc += 1; vcid += 1
+  elif(isrc > idest):
+    if(isrc - idest > (idest + n - isrc)):
+      isrc += 1
+    else:
+      isrc -= 1; vcid += 2
+  else:
+    if(jsrc - jdest > (jdest + n - jsrc)):
+      jsrc += 1; vcid += 1
+    else:
+      jsrc -= 1; vcid += 3
+
+  if(isrc < 0):
+    isrc = n - 1
+  elif(isrc == n):
+    isrc = 0
   
+  if(jsrc < 0):
+    jsrc = m - 1
+  elif(jsrc == m):
+    jsrc = 0
+
+  if(outside):
+    nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
+  else:
+    nextid = Node.generateID(False, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
+    if(srcTopo.topoGraph.nodes.get(nextid) == None):
+      nextid = Node.generateID(True, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
+  
+  return nextid, str(vcid)
+
+def route_chain(src:Node, dest:Node, outside:bool):
+  idsrc = int(src.headID if outside else src.inID)
+  iddest = int(dest.headID if outside else dest.inID)
+
+  srcTopo = outerTopology if outside else (innerTopologies[src.headID])
+
+  nextid = ''
+  vcid = 4*int(src.isHead)
+
+  if(idsrc < iddest):
+    idsrc += 1
+  else:
+    idsrc -= 1
+
+  if(outside):
+    nextid = innerTopologies[str(idsrc)].headID
+  else:
+    nextid = Node.generateID(False, src.headID, src.inClass, str(idsrc))
+    if(srcTopo.topoGraph.nodes.get(nextid) == None):
+      nextid = Node.generateID(True, src.headID, src.inClass, str(idsrc))
+  
+  return nextid, str(vcid)
+
+def route_hypercube(src:Node, dest:Node, outside:bool):
+  idsrc = int(src.headID if outside else src.inID)
+  iddest = int(dest.headID if outside else dest.inID)
+
+  srcTopo = outerTopology if outside else (innerTopologies[src.headID])
+
+  nextid = ''
+  vcid = 4*int(src.isHead)
+  
+  if((idsrc & 0b100) != (iddest & 0b100)):
+    idsrc ^= 0b100
+  elif((idsrc & 0b100) != (iddest & 0b100)):
+    idsrc ^= 0b010
+    vcid += 1
+  else:
+    idsrc ^= 0b001
+    vcid += 2
+
+  if(outside):
+    nextid = innerTopologies[str(idsrc)].headID
+  else:
+    nextid = Node.generateID(False, src.headID, src.inClass, str(idsrc))
+    if(srcTopo.topoGraph.nodes.get(nextid) == None):
+      nextid = Node.generateID(True, src.headID, src.inClass, str(idsrc))
+  
+  return nextid, str(vcid)
 
 def route_backend(src:Node, dest:Node, outer:bool):
   routingClass = src.inClass
