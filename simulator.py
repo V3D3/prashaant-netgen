@@ -25,6 +25,8 @@
 ###P lines of this format <L(i): Destination Node> 1<= i <= P
 ###**************************
 
+### DEPENDENCIES: networkx, pydot
+
 ###Network types: RCMBFH (Ring Chain Mesh Butterfly FoldedTorus Hypercube)
 
 
@@ -96,7 +98,7 @@ class Topology:
 
 
 # This object stores the outer topology
-outerTopology = None
+outerTopology = {}
 # This dictionary stores inner topology objects
 innerTopologies = {}
 # The delimiter in string IDs
@@ -140,33 +142,12 @@ def chain_gen(n, id):
           cnode = Node(isHead, id, thisClass, str(i))
           thisGraph.add_node(cnode.id, exdata=cnode)
 
-        #Add edges between middle nodes
-        for i in range(1, n-1):
-          myID = Node.generateID(False, id, thisClass, str(id))
+        #Add edges between nodes
+        for i in range(0, n-1):
+          myID = Node.generateID((i == int(n/2)), id, thisClass, str(i))
+          nextID = Node.generateID(((i+1) == int(n/2)), id, thisClass, str(i+1))
 
-          leftID = Node.generateID(False, id, thisClass, str(i - 1))
-          #If this leftID does not exist in there, we're looking at the head node to the left
-          if(thisGraph.nodes.get(leftID) == None):
-            leftID = Node.generateID(True, id, thisClass, str(i - 1))
-
-          rightID = Node.generateID(False, id, thisClass, str(i + 1))
-          #Likewise
-          if(thisGraph.nodes.get(leftID) == None):
-            rightID = Node.generateID(True, id, thisClass, str(i + 1))
-
-          thisGraph.add_edge(leftID, myID)
-          thisGraph.add_edge(rightID, myID)
-
-        #For leftmost node
-        leftmostID = Node.generateID(False, id, thisClass, 0)
-        #Rightmost ID changes according to it being the head node
-        rightID = Node.generateID((int(n/2) == 1), id, thisClass, 1)
-        thisGraph.add_edge(leftmostID, rightID)
-
-        #For rightmost node
-        rightmostID = Node.generateID((int(n/2) == (n-1)), id, thisClass, n-1)
-        leftID = Node.generateID((int(n/2) == (n-2)), id, thisClass, n-2)
-        thisGraph.add_edge(rightmostID, leftID)
+          thisGraph.add_edge(myID, nextID)
 
     #Returning the tile and pointer to head_node
     innerTopologies[id] = thisTopology
@@ -230,11 +211,12 @@ def hypercube_gen(id):
     thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
     
     #Create and add nodes
-    nodes = [Node(True, id, thisClass, 0)]
+    nodes = [Node(True, id, thisClass, '0')]
     thisGraph.add_node(nodes[0].id, exdata=nodes[0])
+    thisTopology.headID = nodes[0].id
 
     for i in range(1, 8):
-      nodes.append(Node(False, id, thisClass, i))
+      nodes.append(Node(False, id, thisClass, str(i)))
       thisGraph.add_node(nodes[i].id, exdata=nodes[i])
 
     for i in range(8):
@@ -315,9 +297,9 @@ def butterfly_gen(n):
       return False
 
     #n/2 nodes on left, n/2 on right, n/4 switches in each stage
-    #hence, log2(n/4) = log2(n) - 2 layers of switches
-    #and 2 layers of nodes, total log2(n) layers
-    n_stages = int(log2(n))
+    #hence, log2(n/4) + 1 = log2(n) - 1 layers of switches
+    #and 2 layers of nodes, total log2(n) + 1 layers
+    n_stages = int(log2(n)) + 1
 
     #Add nodes
     for i in range(0, n):
@@ -476,7 +458,7 @@ def ring_head_gen(n):
     for i in range(n):
       thisGraph.add_edge(str(i), str((i + 1) % n))
 
-  outerTopology = thisTopology
+  return thisTopology
 
 
 # For chain type L1 topology
@@ -497,7 +479,7 @@ def chain_head_gen(n):
   else:
     print("Bad dimensions for outer topology as chain")
     exit()
-  outerTopology = thisTopology
+  return thisTopology
 
 
 # For hypercube type L1 topology
@@ -518,7 +500,7 @@ def hypercube_head_gen():
     thisGraph.add_edge(str(i), str(i ^ 2))
     thisGraph.add_edge(str(i), str(i ^ 4))
 
-  outerTopology = thisTopology
+  return thisTopology
 
 # For mesh type L1 topology
 def mesh_head_gen(n,m):
@@ -555,7 +537,7 @@ def mesh_head_gen(n,m):
       addEdgeSafe(i, j, i, j - 1)
       addEdgeSafe(i, j, i, j + 1)
 
-  outerTopology = thisTopology
+  return thisTopology
 
 
 # For Butterfly type L1 topology
@@ -565,7 +547,7 @@ def butterfly_head_gen(n):
   thisGraph = nx.Graph();
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
-  n_stages = int(log2(n))
+  n_stages = int(log2(n)) + 1
 
   for i in range(0,n):
     genInner(str(i))
@@ -585,17 +567,17 @@ def butterfly_head_gen(n):
   
   #Add edges from input to first switch layer
   for i in range(0, int(n/2)):
-    switchID = Node.generateID(True, switchID(1, int(i/2)), thisClass, '', True)
-    thisGraph.add_edge(str(i), switchID)
+    myID = Node.generateID(True, switchID(1, int(i/2)), thisClass, '', True)
+    thisGraph.add_edge(str(i), myID)
   
   #Add edges from last switch layer to output
   for i in range(0, int(n/4)):
-    switchID = Node.generateID(True, switchID(n_stages - 2, i), thisClass, '', True)
+    myID = Node.generateID(True, switchID(n_stages - 2, i), thisClass, '', True)
     nodeID1 = str(int(n/2) + 2*i)
     nodeID2 = str(int(n/2) + 2*i + 1)
     
-    thisGraph.add_edge(switchID, nodeID1)
-    thisGraph.add_edge(switchID, nodeID2)
+    thisGraph.add_edge(myID, nodeID1)
+    thisGraph.add_edge(myID, nodeID2)
 
   def nextSwitch(current, stage):
     bit = 1 << (stage - 1)
@@ -605,13 +587,13 @@ def butterfly_head_gen(n):
   for i in range(1, n_stages - 2):
     for j in range(0, int(n/4)):
       myID = Node.generateID(True, switchID(i, j), thisClass, '', True)
-      nextIDDirect = Node.generateID(False, switchID(i+1, j), thisClass, '', True)
-      nextIDIndirect = Node.generateID(False, switchID(i+1, nextSwitch(j, i)), thisClass, '', True)
+      nextIDDirect = Node.generateID(True, switchID(i+1, j), thisClass, '', True)
+      nextIDIndirect = Node.generateID(True, switchID(i+1, nextSwitch(j, i)), thisClass, '', True)
       
       thisGraph.add_edge(myID, nextIDDirect)
       thisGraph.add_edge(myID, nextIDIndirect)
 
-  outerTopology = thisTopology
+  return thisTopology
 
 
 # For folded torus type L1 topology
@@ -661,14 +643,17 @@ def folded_torus_head_gen(n,m):
     #Add link to prev of last node
     safeAddEdge(i, m-1, i, m-2)
 
-  outerTopology = thisTopology
+  return thisTopology
 
 
 
 ## Function to print the network.dot file
 def print_func():
-  file3 = open(r"Network.dot","w")   # Create file to print
-  file3.close()
+  print(outerTopology)
+  print(innerTopologies)
+  nx.drawing.nx_pydot.write_dot(outerTopology.topoGraph, "Network.Outer.dot")
+  for q in innerTopologies:
+    nx.drawing.nx_pydot.write_dot(innerTopologies[q].topoGraph, "Network." + q + ".dot")
 
 
 
@@ -680,14 +665,16 @@ L1_n = int(L1_n)
 L1_m = int(L1_m)
 
 if L1_network_type == "R":
-    ring_head_gen(L1_n)    
+  outerTopology = ring_head_gen(L1_n)    
 elif L1_network_type == "C":
-    chain_head_gen(L1_n)
+  outerTopology = chain_head_gen(L1_n)
 elif L1_network_type == "M":
-    mesh_head_gen(L1_n,L1_m)
+  outerTopology = mesh_head_gen(L1_n,L1_m)
 elif L1_network_type == "B":
-    butterfly_head_gen(L1_n)
+  outerTopology = butterfly_head_gen(L1_n)
 elif L1_network_type == "F":
-    folded_torus_head_gen(L1_n,L1_m)
+  outerTopology = folded_torus_head_gen(L1_n,L1_m)
 elif L1_network_type == "H":
-    hypercube_head_gen()
+  outerTopology = hypercube_head_gen()
+
+print_func()
