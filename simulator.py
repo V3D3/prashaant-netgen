@@ -4,7 +4,7 @@
 #####################################################################################################
 ### Network on Chip - Project - 2
 ### Simulating transfer of a flit in a two level network of nodes
-### Authors : Vedaant Alok Arya, Pole Praneeth Shashank Nag (EE19B118)
+### Authors : Vedaant Alok Arya (CS19B046), Pole Praneeth, Shashank Nag (EE19B118)
 ###
 ###------------------------------------INPUT----------------------------
 ###The two input files:
@@ -101,6 +101,11 @@ outerTopology = None
 innerTopologies = {}
 # The delimiter in string IDs
 DELIMITER = 'Z'
+# The input files
+file1 = open(r"L1Topology.txt","r")  
+file2 = open(r"L2Topology.txt","r")
+L1 = file1.read()        # Read the L1 topology file to find the top layer topology
+L2 = file2.readlines()   # Read the L2 topology file and generate a list of network for each tile
 
 # The list final_nodes stores all the connections to a particular nodes (a list of list)
 # The NodeID for each node is N<i>, where <i> is its position in the final_nodes list
@@ -124,7 +129,7 @@ def chain_gen(n, id):
     # Trivial case of one node. It isn't connected to anything
     if n == 1:
         node = Node(True, id, thisClass, '')
-        thisGraph.add_node(node.id, node)
+        thisGraph.add_node(node.id, exdata=node)
         thisTopology.headID = node.id
     else :
         #Add nodes
@@ -134,7 +139,7 @@ def chain_gen(n, id):
             isHead = True
             thisTopology.headID = Node.generateID(True, id, thisClass, str(i))
           cnode = Node(isHead, id, thisClass, str(i))
-          thisGraph.add_node(cnode.id, cnode)
+          thisGraph.add_node(cnode.id, exdata=cnode)
 
         #Add edges between middle nodes
         for i in range(1, n-1):
@@ -173,21 +178,21 @@ def chain_gen(n, id):
 def ring_gen(n, id):
     thisClass = 'R'
     thisParams = (n, )
-    thisGraph = nx.Graph();
-    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+    thisGraph = nx.Graph()
+    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph)
     
     #Trivial case of one node
     if n == 1:
       node = Node(True, id, thisClass, '')
-      thisGraph.add_node(node.id, node)
+      thisGraph.add_node(node.id, exdata=node)
       thisTopology.headID = node.id
     #Ring with only two nodes. The nodes are connected to each other
     if n == 2:
       #Generate and add the two nodes
       node1 = Node(False, id, thisClass, '0')
       node2 = Node(True, id, thisClass, '1')
-      thisGraph.add_node(node1.id, node1)
-      thisGraph.add_node(node2.id, node2)
+      thisGraph.add_node(node1.id, exdata=node1)
+      thisGraph.add_node(node2.id, exdata=node2)
       thisTopology.headID = node2.id
       #Link them
       thisGraph.add_edge(node1.id, node2.id)
@@ -196,12 +201,12 @@ def ring_gen(n, id):
     else :
       #Adding nodes, P1: headnode
       headnode = Node.generateID(True, id, thisClass, '0')
-      thisGraph.add_node(headnode.id, headnode)
+      thisGraph.add_node(headnode.id, exdata=headnode)
       thisTopology.headID = headnode.id
       #Adding nodes, P2: others
       for i in range(1, n):
         cnode = Node(False, id, thisClass, str(i))
-        thisGraph.add_node(cnode.id, cnode)
+        thisGraph.add_node(cnode.id, exdata=cnode)
 
       #Adding links except to head
       for i in range(1, n-1):
@@ -227,11 +232,11 @@ def hypercube_gen(id):
     
     #Create and add nodes
     nodes = [Node(True, id, thisClass, 0)]
-    thisGraph.add_node(nodes[0].id, nodes[0])
+    thisGraph.add_node(nodes[0].id, exdata=nodes[0])
 
     for i in range(1, 8):
       nodes.append(Node(False, id, thisClass, i))
-      thisGraph.add_node(nodes[i].id, nodes[i])
+      thisGraph.add_node(nodes[i].id, exdata=nodes[i])
 
     for i in range(8):
       #Edges by inverting 1 bit in each position
@@ -246,7 +251,7 @@ def hypercube_gen(id):
 # Function to generate the tile for a mesh type L2 connection
 # Dimension of n x m (n rows and m columns)
 # f_nodes is the pointer to the first node in the Hypercube
-def mesh_gen(n,m):
+def mesh_gen(n, m, id):
     thisClass = 'M'
     thisParams = (n, m)
     thisGraph = nx.Graph();
@@ -262,7 +267,7 @@ def mesh_gen(n,m):
         if(isHead):
           thisTopology.headID = Node.generateID(True, id, thisClass, str(i) + DELIMITER + str(j))
         cnode = Node(isHead, id, thisClass, str(i) + DELIMITER + str(j))
-        thisGraph.add_node(cnode.id, cnode)
+        thisGraph.add_node(cnode.id, exdata=cnode)
 
     #Checks if node is valid
     def checkNode(ix, jx):
@@ -319,12 +324,12 @@ def butterfly_gen(n):
     for i in range(0, n):
       cnode = Node(checkHead(0 if n < int(n/2) else n_stages - 1, i % (n/2)),
                    id, thisClass, str(i))
-      thisGraph.add_node(cnode.id, cnode)
+      thisGraph.add_node(cnode.id, exdata=cnode)
     #Add switches
     for i in range(1, n_stages - 1):
       for j in range(int(n/4)):
         cswitch = Node(False, id, thisClass, str(i) + DELIMITER + str(j), True)
-        thisGraph.add_node(cswitch.id, cswitch)
+        thisGraph.add_node(cswitch.id, exdata=cswitch)
     
     #Add edges from input to first switch layer
     for i in range(0, int(n/2)):
@@ -380,7 +385,7 @@ def folded_torus_gen(n, m, id):
     for i in range(n):
       for j in range(m):
         cnode = Node(checkHead(i, j), id, thisClass, str(i) + DELIMITER + str(j))
-        thisGraph.add_node(cnode.id, cnode)
+        thisGraph.add_node(cnode.id, exdata=cnode)
 
     def safeAddEdge(isrc, jsrc, idest, jdest):
       idest = (idest + n) % n
@@ -414,27 +419,83 @@ def folded_torus_gen(n, m, id):
 
     innerTopologies[id] = thisTopology
 
+def genInner(id):
+  tileInfo = file2.readline()
+  network_type, n, m = tileInfo.split(',')
+  n = int(n)
+  m = int(m)
+  
+  if network_type == 'R':
+    ring_gen(n, id)
+  elif network_type == 'C':
+    chain_gen(n, id)
+  elif network_type == 'M':
+    mesh_gen(n, m, id)
+  elif network_type == 'B':
+    butterfly_gen(n, id)
+  elif network_type == 'F':
+    folded_torus_gen(n, m, id)
+  elif network_type == 'H':
+    hypercube_gen(id)
+
+def getHeadNode(index):
+  srcTopo = innerTopologies[index]
+  srcHeadID = srcTopo.headID
+  srcHeadNode = srcTopo.topoGraph.nodes[srcHeadID]
+  return srcHeadNode['exdata']
 
 ## The following functions handle linkages for the L1 topology. The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages
 
 # For ring type L1 topology
-def ring_head_gen(head_nodes,n,final_nodes):
+def ring_head_gen(n):
+  thisClass = 'R'
+  thisParams = (n, )
+  thisGraph = nx.Graph()
+  thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph)
 
+  if n == 2:
+    #Generate the topologies
+    genInner('0')
+    node0 = getHeadNode('0')
+    thisGraph.add_node('0', exdata=node0)
+    genInner('1')
+    node1 = getHeadNode('1')
+    thisGraph.add_node('1', exdata=node1)
 
-    if n == 2:
-        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])
-        final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[0]) ])
+    thisGraph.add_edge
+    #Add edge between them
+    nx.Graph().nodes.get()
+    Topology().topoGraph.
+    innerTopologies['0'].headID = 
+    node1 = Node(False, id, thisClass, '0')
+    node2 = Node(False, id, thisClass, '1')
+    thisGraph.add_node(node1.id, exdata=node1)
+    thisGraph.add_node(node2.id, exdata=node2)
+    thisTopology.headID = node2.id
+    #Link them
+    thisGraph.add_edge(node1.id, node2.id)
 
+  #Non trivial case
+  else :
+    #Adding nodes, P1: headnode
+    headnode = Node.generateID(True, id, thisClass, '0')
+    thisGraph.add_node(headnode.id, exdata=headnode)
+    thisTopology.headID = headnode.id
+    #Adding nodes, P2: others
+    for i in range(1, n):
+      cnode = Node(False, id, thisClass, str(i))
+      thisGraph.add_node(cnode.id, exdata=cnode)
 
-    elif n>2 :
+    #Adding links except to head
+    for i in range(1, n-1):
+      myID = Node.generateID(False, id, thisClass, str(i))
+      nextID = Node.generateID(False, id, thisClass, str(i + 1))
+      thisGraph.add_edge(myID, nextID)
+    #Adding links to head
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
 
-
-        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [n - 1,1 ] ]) 
-
-        for i in range(1,n-1) :
-          final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1,i+1 ] ])  
-
-        final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[k]) for k in [ n - 2,0] ])  
+  outerTopology = thisTopology
 
 
 # For chain type L1 topology
@@ -640,12 +701,6 @@ def print_func(final_nodes, final_switches):
 
 ### Start of parsing ###
 
-file1 = open(r"L1Topology.txt","r")  
-file2 = open(r"L2Topology.txt","r")
-
-L1 = file1.read()        # Read the L1 topology file to find the top layer topology
-L2 = file2.readlines()   # Read the L2 topology file and generate a list of network for each tile
-
 # Assign values from the L1 topology
 L1_network_type, L1_n, L1_m = L1.split(",")
 L1_n = int(L1_n)
@@ -668,54 +723,3 @@ elif L1_network_type == "F":
 
 elif L1_network_type == "H":
     hypercube_head_gen(head_nodes,final_nodes)
-
-#Adding the nodes and linking as per the tiles in L2 topology
-for tile_i in L2:
-
-    #Extract the network type and parameters for the tile, and call corresponding functions
-
-  network_type, n, m = tile_i.split(",")
-  n = int(n)
-  m = int(m)
-  f_nodes = len(final_nodes)
-
-  ## The linkages received from the tiles are added extended into the overall final_nodes list
-  ## The head node pointers received from each tile is also appended to the head_nodes list
-  if network_type == "R":
-    tile, head_node = ring_gen(f_nodes,n)  # Ring generator
-    final_nodes.extend(tile)
-    head_nodes.append(head_node)
-
-  elif network_type == "C":
-    tile, head_node = chain_gen(f_nodes,n)  # Chain generator
-    final_nodes.extend(tile)
-    head_nodes.append(head_node)
-
-  elif network_type == "M":
-    tile, head_node = mesh_gen(f_nodes,n,m) # Mesh generator
-    final_nodes.extend(tile)
-    head_nodes.append(head_node)
-
-  elif network_type == "B":
-    tile, head_node, switches = butterfly_gen(f_nodes,n,m) # Butterfly generator
-    final_nodes.extend(tile)
-    final_switches.update(switches)
-    head_nodes.append(head_node)
-
-  elif network_type == "F":
-    tile, head_node = folded_torus_gen(f_nodes,n,m)
-    final_nodes.extend(tile)
-    head_nodes.append(head_node)
-
-  elif network_type == "H":
-    tile, head_node = hypercube_gen(f_nodes)
-    final_nodes.extend(tile)
-    head_nodes.append(head_node)
-
-  else :
-    print("Invalid network type")
-
-
-
-## Calling the functions to Add the head nodes links
-
