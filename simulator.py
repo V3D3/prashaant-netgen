@@ -180,7 +180,7 @@ def ring_gen(n, id):
     #Non trivial case
     else :
       #Adding nodes, P1: headnode
-      headnode = Node.generateID(True, id, thisClass, '0')
+      headnode = Node(True, id, thisClass, '0')
       thisGraph.add_node(headnode.id, exdata=headnode)
       thisTopology.headID = headnode.id
       #Adding nodes, P2: others
@@ -278,70 +278,70 @@ def mesh_gen(n, m, id):
 
 
 # Function to generate the tile for a butterfly type L2 connection
-def butterfly_gen(n):
-    thisClass = 'B'
-    thisParams = (n, )
-    thisGraph = nx.Graph();
-    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+def butterfly_gen(n, id):
+  thisClass = 'B'
+  thisParams = (n, )
+  thisGraph = nx.Graph();
+  thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
-    # node internal IDs: <num1> :
-    #   num1 identifies the node index
-    # switch internal IDs: <num1> Z <num2> :
-    #   num1 identifies the stage in the butterfly
-    #   num2 identifies the switch in the stage
+  # node internal IDs: <num1> :
+  #   num1 identifies the node index
+  # switch internal IDs: <num1> Z <num2> :
+  #   num1 identifies the stage in the butterfly
+  #   num2 identifies the switch in the stage
 
-    def checkHead(stage, index):
-      if(stage == 0 and index == 0):
-        thisTopology.headID = Node.generateID(True, id, thisClass, str(0))
-        return True
-      return False
+  thisTopology.headID = Node.generateID(True, id, thisClass, str(0))
+  def checkHead(stage, index):
+    if(stage == 0 and index == 0):
+      return True
+    return False
 
-    #n/2 nodes on left, n/2 on right, n/4 switches in each stage
-    #hence, log2(n/4) + 1 = log2(n) - 1 layers of switches
-    #and 2 layers of nodes, total log2(n) + 1 layers
-    n_stages = int(log2(n)) + 1
+  #n/2 nodes on left, n/2 on right, n/4 switches in each stage
+  #hence, log2(n/4) + 1 = log2(n) - 1 layers of switches
+  #and 2 layers of nodes, total log2(n) + 1 layers
+  n_stages = int(log2(n)) + 1
 
-    #Add nodes
-    for i in range(0, n):
-      cnode = Node(checkHead(0 if n < int(n/2) else n_stages - 1, i % (n/2)),
-                   id, thisClass, str(i))
-      thisGraph.add_node(cnode.id, exdata=cnode)
-    #Add switches
-    for i in range(1, n_stages - 1):
-      for j in range(int(n/4)):
-        cswitch = Node(False, id, thisClass, str(i) + DELIMITER + str(j), True)
-        thisGraph.add_node(cswitch.id, exdata=cswitch)
+  #Add nodes
+  for i in range(0, n):
+    cnode = Node(checkHead(0 if i < int(n/2) else n_stages - 1, i % int(n/2)),
+                  id, thisClass, str(i))
+    thisGraph.add_node(cnode.id, exdata=cnode)
+  #Add switches
+  for i in range(1, n_stages - 1):
+    for j in range(int(n/4)):
+      cswitch = Node(False, id, thisClass, str(i) + DELIMITER + str(j), True)
+      thisGraph.add_node(cswitch.id, exdata=cswitch)
+  
+  #Add edges from input to first switch layer
+  for i in range(0, int(n/2)):
+    nodeID = Node.generateID(checkHead(0, i), id, thisClass, str(i))
+    switchID = Node.generateID(False, id, thisClass, str(1) + DELIMITER + str(int(i/2)), True)
+    thisGraph.add_edge(nodeID, switchID)
+  
+  #Add edges from last switch layer to output
+  for i in range(0, int(n/4)):
+    switchID = Node.generateID(False, id, thisClass, str(n_stages - 2) + DELIMITER + str(i), True)
+    nodeID1 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i)))
+    nodeID2 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i + 1)))
     
-    #Add edges from input to first switch layer
-    for i in range(0, int(n/2)):
-      nodeID = Node.generateID(checkHead(0, i), id, thisClass, str(i))
-      switchID = Node.generateID(False, id, thisClass, str(1) + DELIMITER + str(int(i/2)), True)
-      thisGraph.add_edge(nodeID, switchID)
-    
-    #Add edges from last switch layer to output
-    for i in range(0, int(n/4)):
-      switchID = Node.generateID(False, id, thisClass, str(n_stages - 2) + DELIMITER + str(i), True)
-      nodeID1 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i)))
-      nodeID2 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i + 1)))
+    thisGraph.add_edge(switchID, nodeID1)
+    thisGraph.add_edge(switchID, nodeID2)
+
+  def nextSwitch(current, stage):
+    bit = 1 << (stage - 1)
+    return bit ^ current
+
+  #Add edges between switches in the inner layers
+  for i in range(1, n_stages - 2):
+    for j in range(0, int(n/4)):
+      myID = Node.generateID(False, id, thisClass, str(i) + DELIMITER + str(j), True)
+      nextIDDirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(j), True)
+      nextIDIndirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(nextSwitch(j, i)), True)
       
-      thisGraph.add_edge(switchID, nodeID1)
-      thisGraph.add_edge(switchID, nodeID2)
+      thisGraph.add_edge(myID, nextIDDirect)
+      thisGraph.add_edge(myID, nextIDIndirect)
 
-    def nextSwitch(current, stage):
-      bit = 1 << (stage - 1)
-      return bit ^ current
-
-    #Add edges between switches in the inner layers
-    for i in range(1, n_stages - 2):
-      for j in range(0, int(n/4)):
-        myID = Node.generateID(False, id, thisClass, str(i) + DELIMITER + str(j), True)
-        nextIDDirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(j), True)
-        nextIDIndirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(nextSwitch(j, i)), True)
-        
-        thisGraph.add_edge(myID, nextIDDirect)
-        thisGraph.add_edge(myID, nextIDIndirect)
-
-    innerTopologies[id] = thisTopology
+  innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a folded torus type L2 connection
@@ -372,8 +372,8 @@ def folded_torus_gen(n, m, id):
       idest = (idest + n) % n
       jdest = (jdest + m) % m
 
-      srcID = Node(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
-      destID = Node(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+      srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
+      destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
       thisGraph.add_edge(srcID, destID)
 
     #Add edges in columns
