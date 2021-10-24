@@ -105,7 +105,6 @@ DELIMITER = 'Z'
 file1 = open(r"L1Topology.txt","r")  
 file2 = open(r"L2Topology.txt","r")
 L1 = file1.read()        # Read the L1 topology file to find the top layer topology
-L2 = file2.readlines()   # Read the L2 topology file and generate a list of network for each tile
 
 # The list final_nodes stores all the connections to a particular nodes (a list of list)
 # The NodeID for each node is N<i>, where <i> is its position in the final_nodes list
@@ -613,113 +612,64 @@ def butterfly_head_gen(n):
       thisGraph.add_edge(myID, nextIDIndirect)
 
   outerTopology = thisTopology
-    
+
+
 # For folded torus type L1 topology
-def folded_torus_head_gen(head_nodes,n,m,final_nodes):
+def folded_torus_head_gen(n,m):
+  thisClass = 'F'
+  thisParams = (n, m)
+  thisGraph = nx.Graph();
+  thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
-    ########First Row##################
+  def genID(i, j):
+    return str(i) + DELIMITER + str(j)
 
-    #First Node
-    final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [ 2, 1, m, 2*m]])
-    #Second Node
-    final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [ 1+ 2, 1 - 1, 1+ m, 1 + 2*m]])
+  #Add nodes
+  for i in range(n):
+    for j in range(m):
+      genInner(genID(i, j))
+      cnode = getHeadNode(genID(i, j))
+      thisGraph.add_node(genID(i, j), exdata=cnode)
 
-    ## now do for first row till last but 2; then do for last node in the first row
-    for j in range(2, m -2):
-      final_nodes[head_nodes[j]].extend(["N{}".format(head_nodes[k]) for k in [ j -2, j + 2,  m * 1 + j, m * 2 + j  ] ])  
-    
-    #Second last node of first row
-    final_nodes[head_nodes[m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m - 2)- 2, (m-2)+1, (m-2)+ m, (m-2)+ 2*m]])
-    #Last node of first row
-    final_nodes[head_nodes[m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m - 1)- 2, (m-1)-1, (m-1)+ m, (m-1)+ 2*m]])
+  def safeAddEdge(isrc, jsrc, idest, jdest):
+    idest = (idest + n) % n
+    jdest = (jdest + m) % m
 
-    ########Second Row##################
+    srcID = genID(isrc, jsrc)
+    destID = genID(idest, jdest)
+    thisGraph.add_edge(srcID, destID)
 
-    #First Node
-    final_nodes[head_nodes[m]].extend(["N{}".format(head_nodes[k]) for k in [ m + 2, m + 1, m - m, m + 2*m]])
-    #Second Node
-    final_nodes[head_nodes[m+1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + 1) + 2, (m+1) - 1, (m+1)- m, (m+1) + 2*m]])
+  #Add edges in columns
+  for j in range(m):
+    #Add link to immediately next of first node
+    safeAddEdge(0, j, 1, j)
+    #Add links in internal nodes
+    for i in range(int(n / 2) - 1):
+      safeAddEdge(2*i, j, 2*i+2, j)
+      safeAddEdge(2*i+1, j, 2*i+3, j)
+    #Add link to prev of last node
+    safeAddEdge(n-1, j, n-2, j)
+  
+  #Add edges in rows
+  for i in range(n):
+    #Add link to immediately next of first node
+    safeAddEdge(i, 0, i, 1)
+    #Add links in internal nodes
+    for j in range(int(m / 2) - 1):
+      safeAddEdge(i, 2*j, i, 2*j+2)
+      safeAddEdge(i, 2*j+1, i, 2*j+3)
+    #Add link to prev of last node
+    safeAddEdge(i, m-1, i, m-2)
 
-    ## now do for second row till last but 2; then do for last node in the first row
-    for j in range(2, m -2):
-      final_nodes[head_nodes[m+j]].extend(["N{}".format(head_nodes[k]) for k in [ (m + j) -2, (m + j) + 2,  (m + j) - m * 1 , (m +j)+ m * 2   ] ])  
-    
-    #Second last node of second row
-    final_nodes[head_nodes[m+m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 2)- 2, (m + m-2)+1, (m + m-2) - m, (m + m-2)+ 2*m]])
-    #Last node of first row
-    final_nodes[head_nodes[m+m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m + m - 1)- 2, (m + m-1)-1, (m + m-1) - m, (m + m-1)+ 2*m]])
-
-    ########################################
-    ########Other Rows######################
-
-    for i in range(2, n-2) :
-    #then in here, do similarly for first node of the row
-      final_nodes[head_nodes[i*m]].extend(["N{}".format(head_nodes[k]) for k in [ m * i  + 2, m * i  + 1,  m * (i-2) ,  m * (i+2) ]])
-    #then in here, do similarly for second node of the row
-      final_nodes[head_nodes[i*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + 1 + 2, m * i + 1 - 1,  m * (i-2) + 1 ,  m * (i+2) + 1]])
-
-      for j in range(2, m -2):
-        final_nodes[head_nodes[i*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + j -2, m * i + j + 2,  m * (i-2) + j,  m * (i+2) + j  ] ])  
-   
-      #then in here, do similarly for second last node of the row
-      final_nodes[head_nodes[i*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-2) -2, m * i + (m-2) +1,  m * (i-2) + (m-2),  m * (i+2) + (m-2)  ] ])
-      #then in here, do similarly for last node of the row
-      final_nodes[head_nodes[i*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-1) -2, m * i + (m-1) -1,  m * (i-2) + (m-1),  m * (i+2) + (m-1)  ] ])
-
-    ########################################    
-    ########Second Last Row##################
-
-    #First Node
-    final_nodes[head_nodes[(n-2)*m]].extend(["N{}".format(head_nodes[k]) for k in [ m*(n-2) + 2, m*(n-2) + 1, m*(n-2) + m, m*(n-2) - 2*m]])
-    #Second Node
-    final_nodes[head_nodes[(n-2)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + 1) + 2, (m*(n-2)+1) - 1, (m*(n-2)+1) + m, (m*(n-2)+1) - 2*m]])
-
-    ## now do for second last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      final_nodes[head_nodes[(n-2)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + j) -2, (m*(n-2) + j) + 2,  (m*(n-2) + j) + m * 1 , (m*(n-2) +j) - 2*m   ] ])  
-    
-    #Second last node of second last row
-    final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 2)- 2, (m*(n-2) + m-2)+1, (m*(n-2) + m-2) + m, (m*(n-2) + m-2) - 2*m]])
-    #Last node of first row
-    final_nodes[head_nodes[(n-2)*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-2) + m - 1)- 2, (m*(n-2) + m-1)-1, (m*(n-2) + m-1) + m, (m*(n-2) + m-1) - 2*m]])
-
-    ########Last Row##################
-
-    #First Node
-    final_nodes[head_nodes[(n-1)*m]].extend(["N{}".format(head_nodes[k]) for k in [ m*(n-1) + 2, m*(n-1) + 1, m*(n-1) - m, m*(n-1) - 2*m]])
-    #Second Node
-    final_nodes[head_nodes[(n-1)*m + 1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + 1) + 2,(m*(n-1)+1) - 1, (m*(n-1)+1) - m, (m*(n-1)+1) - 2*m]])
-
-    ## now do for last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      final_nodes[head_nodes[(n-1)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + j) -2, (m*(n-1) + j) + 2,  (m*(n-1) + j) - m * 1 , (m*(n-1) +j) - 2*m   ] ])  
-    
-    #Second last node of last row
-    final_nodes[head_nodes[(n-2)*m + m-2]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 2)- 2, (m*(n-1) + m-2)+1, (m*(n-1) + m-2) - m, (m*(n-1) + m-2) - 2*m]])
-    #Last node of last row
-    final_nodes[head_nodes[(n-1)*m + m-1]].extend(["N{}".format(head_nodes[k]) for k in [ (m*(n-1) + m - 1)- 2, (m*(n-1) + m-1)-1, (m*(n-1) + m-1) - m, (m*(n-1) + m-1) - 2*m]])
+  outerTopology = thisTopology
 
 
 
+## Function to print the network.dot file
+def print_func():
+  file3 = open(r"Network.dot","w")   # Create file to print
+  file3.close()
 
-
-## Function to print the network.txt file
-def print_func(final_nodes, final_switches):
-  file3 = open(r"Network.txt","w")   # Create file to print
-
-  for node_id in range(0,len(final_nodes)):
-    print("NodeID: N{}".format(node_id),file=file3)   #Print node id
-    print("Links : {}".format(len(final_nodes[node_id])),file=file3) #Print number of links
-
-    for link in range(0,len(final_nodes[node_id])):
-      print("L({}):{}".format(link,final_nodes[node_id][link]),file=file3)  #Print each link as per the final_nodes file
-
-  for switch_id in final_switches:
-    print("NodeID: {}".format(switch_id), file=file3)
-    print("Links : {}".format(len(final_switches[switch_id])), file=file3)
-
-    for link in range(len(final_switches[switch_id])):
-      print("L({}):{}".format(link, final_switches[switch_id][link]), file=file3)
 
 
 ### Start of parsing ###
@@ -730,19 +680,14 @@ L1_n = int(L1_n)
 L1_m = int(L1_m)
 
 if L1_network_type == "R":
-    ring_head_gen(L1_n)
-    
+    ring_head_gen(L1_n)    
 elif L1_network_type == "C":
     chain_head_gen(L1_n)
-    
 elif L1_network_type == "M":
     mesh_head_gen(L1_n,L1_m)
-    
 elif L1_network_type == "B":
     butterfly_head_gen(L1_n)
-    
 elif L1_network_type == "F":
     folded_torus_head_gen(L1_n,L1_m)
-
 elif L1_network_type == "H":
-    hypercube_head_gen(head_nodes,final_nodes)
+    hypercube_head_gen()
