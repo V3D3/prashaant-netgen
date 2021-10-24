@@ -372,6 +372,7 @@ def folded_torus_gen(n, m, id):
 
     def checkHead(i, j):
       if(i == 0 and j == 0):
+        thisTopology.headID = Node.generateID(True, id, thisClass, '0Z0')
         return True
       return False
 
@@ -381,96 +382,37 @@ def folded_torus_gen(n, m, id):
         cnode = Node(checkHead(i, j), id, thisClass, str(i) + DELIMITER + str(j))
         thisGraph.add_node(cnode.id, cnode)
 
-    #Add edges in rows
+    def safeAddEdge(isrc, jsrc, idest, jdest):
+      idest = (idest + n) % n
+      jdest = (jdest + m) % m
+
+      srcID = Node(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
+      destID = Node(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+      thisGraph.add_edge(srcID, destID)
+
+    #Add edges in columns
     for j in range(m):
-    # The logic for folded torus is that each node is connected to a node which is 2 columns away or 2 rows away. Incase of corner nodes, they are connected to the adjacent nodes
-    # Owing to this, we need to handle the nodes running along a boundary of 2 from all sides separately, as these won't have 2 nodes on all its sides 
-    ########First Row##################
-
-    #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + 2,f_nodes + 1,f_nodes + m,f_nodes + 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + 1+ 2,f_nodes + 1 - 1,f_nodes + 1+ m,f_nodes + 1 + 2*m]])
-
-    ## now do for first row till last but 2; then do for last node in the first row
-    for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + j -2,f_nodes + j + 2, f_nodes + m * 1 + j,f_nodes + m * 2 + j  ] ])  
+      #Add link to immediately next of first node
+      safeAddEdge(0, j, 1, j)
+      #Add links in internal nodes
+      for i in range(int(n / 2) - 1):
+        safeAddEdge(2*i, j, 2*i+2, j)
+        safeAddEdge(2*i+1, j, 2*i+3, j)
+      #Add link to prev of last node
+      safeAddEdge(n-1, j, n-2, j)
     
-    #Second last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m - 2)- 2,f_nodes + (m-2)+1,f_nodes + (m-2)+ m,f_nodes + (m-2)+ 2*m]])
-    #Last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m - 1)- 2,f_nodes + (m-1)-1,f_nodes + (m-1)+ m,f_nodes + (m-1)+ 2*m]])
+    #Add edges in rows
+    for i in range(n):
+      #Add link to immediately next of first node
+      safeAddEdge(i, 0, i, 1)
+      #Add links in internal nodes
+      for j in range(int(m / 2) - 1):
+        safeAddEdge(i, 2*j, i, 2*j+2)
+        safeAddEdge(i, 2*j+1, i, 2*j+3)
+      #Add link to prev of last node
+      safeAddEdge(i, m-1, i, m-2)
 
-    ########Second Row##################
-
-    #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + m + 2,f_nodes + m + 1,f_nodes + m - m,f_nodes + m + 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + 1) + 2,f_nodes + (m+1) - 1,f_nodes + (m+1)- m,f_nodes + (m+1) + 2*m]])
-
-    ## now do for second row till last but 2; then do for last node in the first row
-    for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + (m + j) -2,f_nodes + (m + j) + 2, f_nodes + (m + j) - m * 1 ,f_nodes + (m +j)+ m * 2   ] ])  
-    
-    #Second last node of second row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 2)- 2,f_nodes + (m + m-2)+1,f_nodes + (m + m-2) - m,f_nodes + (m + m-2)+ 2*m]])
-    #Last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m + m - 1)- 2,f_nodes + (m + m-1)-1,f_nodes + (m + m-1) - m,f_nodes + (m + m-1)+ 2*m]])
-
-    ########################################
-    ########Other Rows######################
-
-    for i in range(2, n-2) :
-    #then in here, do similarly for first node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i  + 2,f_nodes + m * i  + 1, f_nodes + m * (i-2) , f_nodes + m * (i+2) ]])
-    #then in here, do similarly for second node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + 1 + 2,f_nodes + m * i + 1 - 1, f_nodes + m * (i-2) + 1 , f_nodes + m * (i+2) + 1]])
-
-      for j in range(2, m -2):
-        tile.append(["N{}".format(k) for k in [f_nodes + m * i + j -2,f_nodes + m * i + j + 2, f_nodes + m * (i-2) + j, f_nodes + m * (i+2) + j  ] ])  
-   
-      #then in here, do similarly for second last node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-2) -2,f_nodes + m * i + (m-2) +1, f_nodes + m * (i-2) + (m-2), f_nodes + m * (i+2) + (m-2)  ] ])
-      #then in here, do similarly for last node of the row
-      tile.append(["N{}".format(k) for k in [f_nodes + m * i + (m-1) -2,f_nodes + m * i + (m-1) -1, f_nodes + m * (i-2) + (m-1), f_nodes + m * (i+2) + (m-1)  ] ])
-
-    ########################################    
-    ########Second Last Row##################
-
-    #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + m*(n-2) + 2,f_nodes + m*(n-2) + 1,f_nodes + m*(n-2) + m,f_nodes + m*(n-2) - 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + 1) + 2,f_nodes + (m*(n-2)+1) - 1,f_nodes + (m*(n-2)+1) + m,f_nodes + (m*(n-2)+1) - 2*m]])
-
-    ## now do for second last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + j) -2,f_nodes + (m*(n-2) + j) + 2, f_nodes + (m*(n-2) + j) + m * 1 ,f_nodes + (m*(n-2) +j) - 2*m   ] ])  
-    
-    #Second last node of second last row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 2)- 2,f_nodes + (m*(n-2) + m-2)+1,f_nodes + (m*(n-2) + m-2) + m,f_nodes + (m*(n-2) + m-2) - 2*m]])
-    #Last node of first row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-2) + m - 1)- 2,f_nodes + (m*(n-2) + m-1)-1,f_nodes + (m*(n-2) + m-1) + m,f_nodes + (m*(n-2) + m-1) - 2*m]])
-
-    ########Last Row##################
-
-    #First Node
-    tile.append(["N{}".format(k) for k in [f_nodes + m*(n-1) + 2,f_nodes + m*(n-1) + 1,f_nodes + m*(n-1) - m,f_nodes + m*(n-1) - 2*m]])
-    #Second Node
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + 1) + 2,f_nodes + (m*(n-1)+1) - 1,f_nodes + (m*(n-1)+1) - m,f_nodes + (m*(n-1)+1) - 2*m]])
-
-    ## now do for last row till last but 2; then do for the last 2 nodes in the row
-    for j in range(2, m -2):
-      tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + j) -2,f_nodes + (m*(n-1) + j) + 2, f_nodes + (m*(n-1) + j) - m * 1 ,f_nodes + (m*(n-1) +j) - 2*m   ] ])  
-    
-    #Second last node of last row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 2)- 2,f_nodes + (m*(n-1) + m-2)+1,f_nodes + (m*(n-1) + m-2) - m,f_nodes + (m*(n-1) + m-2) - 2*m]])
-    #Last node of last row
-    tile.append(["N{}".format(k) for k in [f_nodes + (m*(n-1) + m - 1)- 2,f_nodes + (m*(n-1) + m-1)-1,f_nodes + (m*(n-1) + m-1) - m,f_nodes + (m*(n-1) + m-1) - 2*m]])
-
-
-    head_node = f_nodes + int(n/2)*m +  int((m)/2);
-
-    return tile, head_node
+    innerTopologies[id] = thisTopology
 
 
 ## The following functions handle linkages for the L1 topology. The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages
