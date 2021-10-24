@@ -791,7 +791,43 @@ def route_chain(src:Node, dest:Node, outside:bool):
   if(idsrc < iddest):
     idsrc += 1
   else:
-    idsrc -= 1
+    idsrc -= 1; vcid += 1
+
+  if(outside):
+    nextid = innerTopologies[str(idsrc)].headID
+  else:
+    nextid = Node.generateID(False, src.headID, src.inClass, str(idsrc))
+    if(srcTopo.topoGraph.nodes.get(nextid) == None):
+      nextid = Node.generateID(True, src.headID, src.inClass, str(idsrc))
+  
+  return nextid, str(vcid)
+
+def route_ring(src:Node, dest:Node, outside:bool):
+  idsrc = int(src.headID if outside else src.inID)
+  iddest = int(dest.headID if outside else dest.inID)
+
+  srcTopo = outerTopology if outside else (innerTopologies[src.headID])
+
+  nextid = ''
+  vcid = 4*int(src.isHead)
+
+  n = srcTopo.topoParams
+
+  if(idsrc < iddest):
+    if(iddest - idsrc > (idsrc + n - iddest)):
+      idsrc -= 1; vcid += 1
+    else:
+      idsrc += 1
+  else:
+    if(idsrc - iddest > (iddest + n - idsrc)):
+      idsrc += 1
+    else:
+      idsrc -= 1; vcid += 1
+  
+  if(idsrc < 0):
+    idsrc = n - 1
+  elif(idsrc == n):
+    idsrc = 0
 
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
