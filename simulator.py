@@ -649,8 +649,6 @@ def folded_torus_head_gen(n,m):
 
 ## Function to print the network.dot file
 def print_func():
-  print(outerTopology)
-  print(innerTopologies)
   nx.drawing.nx_pydot.write_dot(outerTopology.topoGraph, "Network.Outer.dot")
   for q in innerTopologies:
     nx.drawing.nx_pydot.write_dot(innerTopologies[q].topoGraph, "Network." + q + ".dot")
@@ -678,3 +676,125 @@ elif L1_network_type == "H":
   outerTopology = hypercube_head_gen()
 
 print_func()
+
+def getTopo(id, inner:bool):
+  if(outerTopology.topoGraph.nodes.get(id) != None):
+    return outerTopology.topoGraph.nodes[id]
+  for q in innerTopologies:
+    if(innerTopologies[q].topoGraph.nodes.get(id) != None):
+      return innerTopologies[q].topoGraph.nodes[id]
+  return None
+
+def getNode(id):
+  if(outerTopology.topoGraph.nodes.get(id) != None):
+    return outerTopology.topoGraph.nodes[id]
+  for q in innerTopologies:
+    if(innerTopologies[q].topoGraph.nodes.get(id) != None):
+      return innerTopologies[q].topoGraph.nodes[id]
+  return None
+
+# returns nextID, vcID
+def route_mesh(src:Node, dest:Node, outside:bool):
+  idsrc = src.headID if outside else src.inID
+  iddest = dest.headID if outside else dest.inID
+
+  isrc, jsrc = list(map(lambda x : int(x), idsrc.split(DELIMITER)))
+  idest, jdest = list(map(lambda x : int(x), iddest.split(DELIMITER)))
+
+  srcTopo = outerTopology if outside else (innerTopologies[src.headID])
+
+  nextid = ''
+  vcid = 4*int(src.isHead)
+  if(isrc < idest):
+    isrc += 1
+  elif(jsrc < jdest):
+    jsrc += 1
+    vcid += 1
+  elif(isrc > idest):
+    isrc -= 1
+    vcid += 2
+  else:
+    jsrc -= 1
+    vcid += 3
+
+  if(outside):
+    nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
+  else:
+    nextid = Node.generateID(False, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
+    if(srcTopo.topoGraph.nodes.get(nextid) == None):
+      nextid = Node.generateID(True, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
+  
+  return nextid, str(vcid)
+  
+
+def route_backend(src:Node, dest:Node, outer:bool):
+  routingClass = src.inClass
+  if(outer):
+    routingClass = outerTopology.topoClass
+  
+  if(routingClass == 'C'):
+    return route_chain(src, dest, outer)
+  elif(routingClass == 'R'):
+    return route_ring(src, dest, outer)
+  elif(routingClass == 'B'):
+    return route_butterfly(src, dest, outer)
+  elif(routingClass == 'F'):
+    return route_folded_torus(src, dest, outer)
+  elif(routingClass == 'H'):
+    return route_hypercube(src, dest, outer)
+  elif(routingClass == 'M'):
+    return route_mesh(src, dest, outer)
+
+  print("routing class not found")
+  exit()
+
+def route_inside(src:Node, dest:Node):
+  return route_backend(src, dest, False)
+
+def route_outside(src:Node, dest:Node):
+  return route_backend(src, dest, True)
+
+#Replace destination with the tile's head node
+def route_outwards(src:Node, dest:Node):
+  dest = innerTopologies[src.headID].topoGraph.nodes[innerTopologies[src.headID].headID]['exdata']
+  return route_backend(src, dest, False)
+
+def route(idsrc, iddest):
+  nodesrc = getNode(idsrc)['exdata']
+  nodedest = getNode(iddest)['exdata']
+  tilesrc = nodesrc.headID
+  tiledest = nodedest.headID
+  
+  #This case: since we're passed unequal src, dest with same head,
+  #           route them within a tile
+  if(tilesrc == tiledest):
+    return route_inside(nodesrc, nodedest)
+
+  #If src is a Head, and heads of tiles differ, route src outside
+  if(nodesrc.isHead):
+    return route_outside(nodesrc, nodedest)
+  
+  #If src is not a Head, route it to the head of its tile
+  return route_outwards(nodesrc, nodedest)
+
+
+def simulateOnce():
+  print("Enter source ID (or EXIT to stop): ", end='')
+  sourceID = input()
+  if(sourceID == "EXIT"):
+    print("\nQuitting...")
+    exit()
+  print("\nEnter destination ID: ", end='')
+  destID = input()
+
+  print("\nRouting...\n")
+
+  while(sourceID != destID):
+    nextID, vcID = route(sourceID, destID)
+    print("Node: " + nextID + ", VC: " + vcID)
+    sourceID = nextID
+
+  print("\nRouting complete.\n")
+
+while True:
+  simulateOnce()
