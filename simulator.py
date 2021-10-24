@@ -462,134 +462,157 @@ def ring_head_gen(n):
     node1 = getHeadNode('1')
     thisGraph.add_node('1', exdata=node1)
 
-    thisGraph.add_edge
     #Add edge between them
-    nx.Graph().nodes.get()
-    Topology().topoGraph.
-    innerTopologies['0'].headID = 
-    node1 = Node(False, id, thisClass, '0')
-    node2 = Node(False, id, thisClass, '1')
-    thisGraph.add_node(node1.id, exdata=node1)
-    thisGraph.add_node(node2.id, exdata=node2)
-    thisTopology.headID = node2.id
-    #Link them
-    thisGraph.add_edge(node1.id, node2.id)
+    thisGraph.add_edge('0', '1')
 
   #Non trivial case
   else :
-    #Adding nodes, P1: headnode
-    headnode = Node.generateID(True, id, thisClass, '0')
-    thisGraph.add_node(headnode.id, exdata=headnode)
-    thisTopology.headID = headnode.id
-    #Adding nodes, P2: others
-    for i in range(1, n):
-      cnode = Node(False, id, thisClass, str(i))
-      thisGraph.add_node(cnode.id, exdata=cnode)
+    #Adding nodes
+    for i in range(n):
+      genInner(str(i))
+      node = getHeadNode(str(i))
+      thisGraph.add_node(str(i), exdata=node)
 
-    #Adding links except to head
-    for i in range(1, n-1):
-      myID = Node.generateID(False, id, thisClass, str(i))
-      nextID = Node.generateID(False, id, thisClass, str(i + 1))
-      thisGraph.add_edge(myID, nextID)
-    #Adding links to head
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
+    #Adding links
+    for i in range(n):
+      thisGraph.add_edge(str(i), str((i + 1) % n))
 
   outerTopology = thisTopology
 
 
 # For chain type L1 topology
-def chain_head_gen(head_nodes,n,final_nodes):
+def chain_head_gen(n):
+  thisClass = 'C'
+  thisParams = (n, )
+  thisGraph = nx.Graph();
+  thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
+  if n >= 2:
+    for i in range(n):
+      genInner(str(i))
+      node = getHeadNode(str(i))
+      thisGraph.add_node(str(i), exdata=node)
 
-    if n >= 1:
-
-        final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[1]) ])  
-
-        for i in range(1, n-1) :
-            final_nodes[head_nodes[i]].extend(["N{}".format(head_nodes[k]) for k in [i-1, i+1 ] ])  
-
-        final_nodes[head_nodes[n-1]].extend(["N{}".format(head_nodes[n-2])])
+    for i in range(0, n-1):
+      thisGraph.add_edge(str(i), str(i+1))
+  else:
+    print("Bad dimensions for outer topology as chain")
+    exit()
+  outerTopology = thisTopology
 
 
 # For hypercube type L1 topology
-def hypercube_head_gen(head_nodes,final_nodes):
+def hypercube_head_gen():
+  thisClass = 'H'
+  thisParams = None
+  thisGraph = nx.Graph();
+  thisTopology = Topology(True, '', thisClass, thisParams, thisGraph);
+  n = 8
 
+  for i in range(n):
+    genInner(str(i))
+    node = getHeadNode(str(i))
+    thisGraph.add_node(str(i), exdata=node)
+  
+  for i in range(n):
+    thisGraph.add_edge(str(i), str(i ^ 1))
+    thisGraph.add_edge(str(i), str(i ^ 2))
+    thisGraph.add_edge(str(i), str(i ^ 4))
 
-    final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [1,3,4 ]])  
-    final_nodes[head_nodes[1]].extend(["N{}".format(head_nodes[k]) for k in [0,2,5 ]])  
-    final_nodes[head_nodes[2]].extend(["N{}".format(head_nodes[k]) for k in [1,3,6 ]])  
-    final_nodes[head_nodes[3]].extend(["N{}".format(head_nodes[k]) for k in [0,2,7 ]])  
-    final_nodes[head_nodes[4]].extend(["N{}".format(head_nodes[k]) for k in [0,5,7 ]])  
-    final_nodes[head_nodes[5]].extend(["N{}".format(head_nodes[k]) for k in [1,4,6 ]])  
-    final_nodes[head_nodes[6]].extend(["N{}".format(head_nodes[k]) for k in [2,5,7 ]])  
-    final_nodes[head_nodes[7]].extend(["N{}".format(head_nodes[k]) for k in [3,6,4 ]])  
-
-
+  outerTopology = thisTopology
 
 # For mesh type L1 topology
-def mesh_head_gen(head_nodes,n,m,final_nodes):
+def mesh_head_gen(n,m):
+  thisClass = 'M'
+  thisParams = (n, m)
+  thisGraph = nx.Graph();
+  thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
-    if n < 2 or m < 2:
-        print("Invalid Mesh dimensions. A mesh of dimension 1 is a chain. Please correct the L2 topology")
-        exit()
-    
+  def genID(ix, jx):
+    return str(ix) + DELIMITER + str(jx)
 
-    final_nodes[head_nodes[0]].extend(["N{}".format(head_nodes[k]) for k in [1, m]])
-    ## now do for first row till second last; then do for last node in the first row
-    for j in range(1, m -1):
-      final_nodes[head_nodes[j]].extend(["N{}".format(head_nodes[k]) for k in [j -1,  j + 1, m*1 + j  ] ])  
-    
-    final_nodes[head_nodes[m-1]].extend(["N{}".format(head_nodes[k]) for k in [ m - 2, m + m -1]])
+  for i in range(n):
+    for j in range(m):
+      genInner(genID(i, j))
+      node = getHeadNode(genID(i, j))
+      thisGraph.add_node(genID(i, j), exdata=node)
 
-    for i in range(1, n-1) :
-    #then in here, do similarly for first node of the row
-      final_nodes[head_nodes[i*m]].extend(["N{}".format(head_nodes[k]) for k in [ m * i  + 1,  m * (i-1) ,  m * (i+1) ]])
-      for j in range(1, m -1):
-        final_nodes[head_nodes[i*m+j]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + j -1, m * i + j + 1,  m * (i-1) + j,  m * (i+1) + j  ] ])  
-   
-      #then in here, do similarly for last node of the row
-      final_nodes[head_nodes[i*m + m-1 ]].extend(["N{}".format(head_nodes[k]) for k in [ m * i + (m-1) -1,  m * (i-1) + (m-1),  m * (i+1) + (m-1)  ] ])
+  def checkNode(ix, jx):
+    if(ix < 0 or jx < 0):
+      return False
+    if(ix >= n or jx >= m):
+      return False
+    return True
 
-    #then do for the last row like the first row
-    final_nodes[head_nodes[(n-1)*m ]].extend(["N{}".format(head_nodes[k]) for k in [ m * (n-1)  + 1,  m * ((n-1)-1)]])    
-    for j in range(1, m -1):
-      final_nodes[head_nodes[(n-1)*m + j]].extend(["N{}".format(head_nodes[k]) for k in [ m * (n-1) + j -1, m * (n-1) + j + 1,  m * ((n-1)-1) + j  ] ])  
+  def addEdgeSafe(isrc, jsrc, idest, jdest):
+    if(not checkNode(idest, jdest)):
+      return
+    thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest))
 
-    final_nodes[head_nodes[(n-1)*m + m - 1 ]].extend(["N{}".format(head_nodes[k]) for k in [ m * (n-1) + (m-1) -1,  m * ((n-1)-1) + (m-1)  ] ])
-   
+  for i in range(n):
+    for j in range(m):
+      addEdgeSafe(i, j, i - 1, j)
+      addEdgeSafe(i, j, i + 1, j)
+      addEdgeSafe(i, j, i, j - 1)
+      addEdgeSafe(i, j, i, j + 1)
+
+  outerTopology = thisTopology
 
 
-# FOr Butterfly type L1 topology
-def butterfly_head_gen(head_nodes,n,final_nodes,final_switches):
-    n_stages = int(log2(n))
-    for i in range(0,n):
-      # add the link to these new switches in the head nodes which will act as input
-      final_nodes[head_nodes[i]].extend(["S{}w{}".format(0, int(i/2))])
+# For Butterfly type L1 topology
+def butterfly_head_gen(n):
+  thisClass = 'B'
+  thisParams = (n, )
+  thisGraph = nx.Graph();
+  thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
-    # switch names: S <num1> w <num2> :
+  n_stages = int(log2(n))
+
+  for i in range(0,n):
+    genInner(str(i))
+    cnode = getHeadNode(str(i))
+    thisGraph.add_node(str(i), exdata=cnode)
+
+    # switch names: <num1> <DELIM> <num2> :
     #   num1 identifies the stage in the butterfly
     #   num2 identifies the switch in the stage
-    # note this automatically differentiates these switches from inner topology switches
 
-    for k in range(0, n_stages):
-      for i in range(0, int(n / 2)):
-        final_switches['S{}w{}'.format(0,i)] = []
+  def switchID(stage, index):
+    return str(stage) + DELIMITER + str(index)
 
-    # add switches
-    for k in range(1, n_stages):
-      # each stage has (n/2) switches in our butterfly
-      for i in range(0, int(n/2)):
-        # current switch is (k-1, i)
-        # it should be linked to two switches:
-        #   both in the next layer k
-        #   first one is to the direct next one,
-        #   other one is to one bit flipped, the index of bit is k-1 from LEFT, hence (stages - k - 1) from RIGHT
-        final_switches['S{}w{}'.format(k-1,i)] = ["S{}w{}".format(k,i), "S{}w{}".format(k,(i ^ (2**(n_stages - k - 1))))]
+  for i in range(1, n_stages - 1):
+    for j in range(0, int(n/4)):
+      thisGraph.add_node(str(i), exdata=Node(True, switchID(i, j), thisClass, '', True))
+  
+  #Add edges from input to first switch layer
+  for i in range(0, int(n/2)):
+    switchID = Node.generateID(True, switchID(1, int(i/2)), thisClass, '', True)
+    thisGraph.add_edge(str(i), switchID)
+  
+  #Add edges from last switch layer to output
+  for i in range(0, int(n/4)):
+    switchID = Node.generateID(True, switchID(n_stages - 2, i), thisClass, '', True)
+    nodeID1 = str(int(n/2) + 2*i)
+    nodeID2 = str(int(n/2) + 2*i + 1)
+    
+    thisGraph.add_edge(switchID, nodeID1)
+    thisGraph.add_edge(switchID, nodeID2)
 
-    # last stage (final layer of switches --> output nodes)
-    for i in range(0, int(n/2)): # note: n guaranteed to be divisble by 2
-      final_switches['S{}w{}'.format(n_stages-1,i)] = ["N{}".format(head_nodes[n + i*2]), "N{}".format(head_nodes[n + i*2 + 1])]
+  def nextSwitch(current, stage):
+    bit = 1 << (stage - 1)
+    return bit ^ current
+
+  #Add edges between switches in the inner layers
+  for i in range(1, n_stages - 2):
+    for j in range(0, int(n/4)):
+      myID = Node.generateID(True, switchID(i, j), thisClass, '', True)
+      nextIDDirect = Node.generateID(False, switchID(i+1, j), thisClass, '', True)
+      nextIDIndirect = Node.generateID(False, switchID(i+1, nextSwitch(j, i)), thisClass, '', True)
+      
+      thisGraph.add_edge(myID, nextIDDirect)
+      thisGraph.add_edge(myID, nextIDIndirect)
+
+  outerTopology = thisTopology
     
 # For folded torus type L1 topology
 def folded_torus_head_gen(head_nodes,n,m,final_nodes):
