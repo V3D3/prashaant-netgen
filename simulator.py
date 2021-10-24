@@ -863,9 +863,10 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
     final_switch = int((int(iddest) - n/2 )/2)       
 
     if (outside):
-      print("Node (Switch): {}, VC : {}",.format{Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid})    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid))    
+
     else:
-      print("Node (Switch): {}, VC : {}",.format{Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid})    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid))    
       
     for i in range(2,int(log2(n))):
       if current_switch %(2^i) == final_switch %(2^i):
@@ -874,33 +875,33 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
         next_switch = nextSwitch(current_switch,i)
        
       if (outside):
-        print("Node (Switch): {}, VC : {}",.format{Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid})   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid))   #Printing internal VC 
       else :
-        print("Node (Switch): {}, VC : {}",.format{Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid})   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid))   #Printing internal VC 
 
       current_switch = next_switch
 
 
   else :   #Routing from right to left
 
-    current_switch = int((idsrc) - n/2 )/2)
+    current_switch = int((idsrc - n/2 )/2)
     final_switch = int(iddest/2)
 
     if (outside):
-      print("Node (Switch): {}, VC : {}",.format{Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid})    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid))    
     else:
-      print("Node (Switch): {}, VC : {}",.format{Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid})    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid))    
       
     for i in range(int(log2(n))-1,1,-1):
-      if current_switch %(2^i) = final_switch %(2^i):
+      if current_switch %(2^i) == final_switch %(2^i):
         next_switch = current_switch
       else :
         next_switch = prevSwitch(current_switch,i)
 
       if (outside):
-        print("Node (Switch): {}, VC : {}",.format{Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid})   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid))   #Printing internal VC 
       else :
-        print("Node (Switch): {}, VC : {}",.format{Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid})   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid))   #Printing internal VC 
 
       current_switch = next_switch
 
