@@ -1084,7 +1084,7 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
       print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),''))    
       
     for i in range(2,int(log2(n))):
-      if current_switch %(2^i) == final_switch %(2^i):
+      if current_switch %(2**i) == final_switch %(2**i):
         next_switch = current_switch
       else :
         next_switch = nextSwitch(current_switch,i)
@@ -1113,7 +1113,7 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
       print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),''))    
       
     for i in range(int(log2(n))-1,1,-1):
-      if current_switch %(2^i) == final_switch %(2^i):
+      if current_switch %(2**i) == final_switch %(2**i):
         next_switch = current_switch
       else :
         next_switch = prevSwitch(current_switch,i)
