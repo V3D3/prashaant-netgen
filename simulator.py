@@ -1018,7 +1018,7 @@ def route_ring(src:Node, dest:Node, outside:bool, vcid):
     vcid = 'H' if outside else ''
 
   # Needed parameter for routing
-  n = srcTopo.topoParams
+  n = srcTopo.topoParams[0]
 
   # Dateline routing - here just using shortest arc
   if(idsrc != iddest):
@@ -1056,7 +1056,7 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
 
   nextid = ''
     
-  n = srcTopo.topoParams
+  n = srcTopo.topoParams[0]
 
   def nextSwitch(current, stage):
     bit = 1 << (stage - 1)
@@ -1100,9 +1100,9 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
   else :   #Routing from right to left
 
     if (outside):  
-        vcid = 'H' + str(idsrc - n/2)
+        vcid = 'H' + str(idsrc - int(n/2))
     else :
-        vcid = str(idsrc - n/2)           
+        vcid = str(idsrc - int(n/2))
     
     current_switch = int((idsrc - n/2 )/2)
     final_switch = int(iddest/2)
@@ -1137,19 +1137,22 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
 
 # Hypercube routing
 def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
+  # Get IDs
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
+  # Get source topo
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  #vcid = 4*int(src.isHead)
   
+  # Set vcid appropriately
   if (outside):
     vcid = 'H' + str(idsrc)
   else :
     vcid = str(idsrc)
   
+  # Route once
   if((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b100
   elif((idsrc & 0b100) != (iddest & 0b100)):
@@ -1157,6 +1160,7 @@ def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   else:
     idsrc ^= 0b001
 
+  # Get nextID
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
   else:
