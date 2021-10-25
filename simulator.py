@@ -893,7 +893,7 @@ def route_folded_torus(src:Node, dest:Node, outside:bool, vcid=''):
   vcset = False
 
   # Check if vcid supplied is valid
-  if(len(vcid > 0)):
+  if(len(vcid) > 0):
     # Check if it was shifted to 1
     vcset = (vcid[-1] == '1')
     if(vcset):
@@ -1055,84 +1055,102 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-    
+  # Param of topo
   n = srcTopo.topoParams[0]
 
+  # Get switch index for switch in next stage connected diagonally
   def nextSwitch(current, stage):
     bit = 1 << (stage - 1)
     return bit ^ current
 
+  # Get switch index for switch in prev stage connected diagonally
   def prevSwitch(current, stage):
     bit = 1 << (stage - 2)
     return bit ^ current
 
-
-  if (idsrc < iddest):    # Left to right routing. Assuming there are no illegal routings due to invalid inputs  
-
+  # Left to right routing
+  if (idsrc < iddest):
+    # Set vcid
     if (outside):  
         vcid = 'H' + str(idsrc)
     else :
         vcid = str(idsrc)       
-        
+    
+    # First and last switch indices
     current_switch = int(idsrc/2)
     final_switch = int((int(iddest) - n/2 )/2)       
 
+    # Print input nodes to switch connection
     if (outside):
       print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),''))    
-
     else:
       print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),''))    
       
+    # Print inter-switch connections
     for i in range(1,int(log2(n)-1)):
+      # Go directly or diagonally?
       if current_switch %(2**i) == final_switch %(2**i):
+        # Directly (corresponding bits match)
         next_switch = current_switch
       else :
+        # Diagonally
         next_switch = nextSwitch(current_switch,i)
-       
+      
+      # Print accordingly
       if (outside):
         print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i+1) + DELIMITER + str(next_switch), 'B', '', True),''))    
       else :
         print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i+1) + DELIMITER + str(next_switch), True),''))    
 
+      # Next switch
       current_switch = next_switch
 
 
-  else :   #Routing from right to left
-
+  # Routing from right to left
+  else:
+    # Set vcid
     if (outside):  
         vcid = 'H' + str(idsrc - int(n/2))
     else :
         vcid = str(idsrc - int(n/2))
     
+    # First and last switch indices
     current_switch = int((idsrc - n/2 )/2)
     final_switch = int(iddest/2)
 
+    # Print hops to first switch from input node
     if (outside):
       print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(int(log2(n)) - 1) + DELIMITER + str(current_switch), 'B', '', True),''))    
     else:
       print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(int(log2(n)) - 1) + DELIMITER + str(current_switch), True),''))    
       
+    # Print hops between switches (the messiness is due to reverse order)
     for i in range(int(log2(n))-1,1,-1):
+      # Go directly or diagonally?
       if current_switch %(2**(i-1)) == final_switch %(2**(i-1)):
+        # Directly
         next_switch = current_switch
       else :
+        # Diagonally (using prevSwitch here)
         next_switch = prevSwitch(current_switch,i)
 
+      # Print hop appropriately
       if (outside):
         print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i-1) + DELIMITER + str(next_switch), 'B', '', True),''))    
       else :
         print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i-1) + DELIMITER + str(next_switch), True),''))   
 
+      # And continue
       current_switch = next_switch
 
+  # Get nextID (for destination node here)
   if(outside):
       nextid = innerTopologies[str(iddest)].headID
   else:
       nextid = Node.generateID(False, src.headID, src.inClass, str(iddest))
       if(srcTopo.topoGraph.nodes.get(nextid) == None):
           nextid = Node.generateID(True, src.headID, src.inClass, str(iddest))
-
-            
+  
   return nextid, str(vcid)
 
 # Hypercube routing
@@ -1155,7 +1173,7 @@ def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   # Route once
   if((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b100
-  elif((idsrc & 0b100) != (iddest & 0b100)):
+  elif((idsrc & 0b010) != (iddest & 0b010)):
     idsrc ^= 0b010
   else:
     idsrc ^= 0b001
