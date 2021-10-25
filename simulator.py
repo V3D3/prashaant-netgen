@@ -48,6 +48,8 @@
 ###      0 0000   0010
 ### 
 ### Switches are given IDs but not treated as Nodes when routing
+### The switches are implemented as psuedo nodes, 
+###   in the sense that they are essentially a set of MUXes which are enabled by the scheduler
 ### inID and outID are tuples of integers (in mesh, butterfly, foldedtorus)
 ### -----------------------------------------------------------------
 
@@ -1053,9 +1055,12 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
-
+    
   n = srcTopo.topoParams
+
+  def nextSwitch(current, stage):
+    bit = 1 << (stage - 1)
+    return bit ^ current
 
   def prevSwitch(current, stage):
     bit = 1 << (stage - 2)
@@ -1064,14 +1069,19 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
 
   if (idsrc < iddest):    # Left to right routing. Assuming there are no illegal routings due to invalid inputs  
 
+    if (outside):  
+        vcid = 'H' + str(idsrc)
+    else :
+        vcid = str(idsrc)       
+        
     current_switch = int(idsrc/2)
     final_switch = int((int(iddest) - n/2 )/2)       
 
     if (outside):
-      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid))    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),''))    
 
     else:
-      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid))    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),''))    
       
     for i in range(2,int(log2(n))):
       if current_switch %(2^i) == final_switch %(2^i):
@@ -1080,22 +1090,27 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
         next_switch = nextSwitch(current_switch,i)
        
       if (outside):
-        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid))   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),''))    
       else :
-        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid))   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),''))    
 
       current_switch = next_switch
 
 
   else :   #Routing from right to left
 
+    if (outside):  
+        vcid = 'H' + str(idsrc - n/2)
+    else :
+        vcid = str(idsrc - n/2)           
+    
     current_switch = int((idsrc - n/2 )/2)
     final_switch = int(iddest/2)
 
     if (outside):
-      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),vcid))    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(1) + DELIMITER + str(current_switch), 'B', '', True),''))    
     else:
-      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),vcid))    
+      print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(1) + DELIMITER + str(current_switch), True),''))    
       
     for i in range(int(log2(n))-1,1,-1):
       if current_switch %(2^i) == final_switch %(2^i):
@@ -1104,18 +1119,18 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
         next_switch = prevSwitch(current_switch,i)
 
       if (outside):
-        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),vcid))   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(True, str(i) + DELIMITER + str(next_switch), 'B', '', True),''))    
       else :
-        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),vcid))   #Printing internal VC 
+        print("Node (Switch): {}, VC : {}".format(Node.generateID(False, src.headID, src.inClass, str(i) + DELIMITER + str(next_switch), True),''))   
 
       current_switch = next_switch
 
   if(outside):
       nextid = innerTopologies[str(iddest)].headID
   else:
-      nextid = Node.generateID(False, src.headID, src.inClass, str(idest))
+      nextid = Node.generateID(False, src.headID, src.inClass, str(iddest))
       if(srcTopo.topoGraph.nodes.get(nextid) == None):
-          nextid = Node.generateID(True, src.headID, src.inClass, str(idest))
+          nextid = Node.generateID(True, src.headID, src.inClass, str(iddest))
 
             
   return nextid, str(vcid)
@@ -1128,16 +1143,19 @@ def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  #vcid = 4*int(src.isHead)
+  
+  if (outside):
+    vcid = 'H' + str(idsrc)
+  else :
+    vcid = str(idsrc)
   
   if((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b100
   elif((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b010
-    vcid += 1
   else:
     idsrc ^= 0b001
-    vcid += 2
 
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
