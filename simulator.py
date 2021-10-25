@@ -1,13 +1,11 @@
-# monolithic simulator
 #!/usr/bin/python
-#####################################################################################################
-#####################################################################################################
+# monolithic simulator
+
 ### Network on Chip - Project - 2
 ### Simulating transfer of a flit in a two level network of nodes
-### Authors : Vedaant Alok Arya (CS19B046), Pole Praneeth, Shashank Nag (EE19B118)
-###
-###------------------------------------INPUT----------------------------
-###The two input files:
+### Authors : Shashank Nag (EE19B118), Vedaant Alok Arya (CS19B046), Pole Praneeth
+### ----------------------------------------------------------------
+### INPUT:
 ### L1Topology.txt will have single line with this data
 ### X,n,m where X = C, R, M, F, H, B
 ### C: Chain, R: Ring, M: Mesh, F: Folded Torus, H: Hypercube of dimension 3 (8 nodes), B: Butterfly network
@@ -15,46 +13,63 @@
 ### m: Number of nodes in second dimension - it is 1 for C and R.
 ### n = m = 3 for H and 
 ### n = m = 2^k  (Power of 2) for B for some k > 1
+###
 ### L2Topology.txt will have n X m lines with each line as the same syntax as above.
-###-
-###-------------OUTPUT---------------------------------------
-### All nodes in a single file. Each node described in the form
-###******************
-###NodeID: 
-###Links: <Number of links> (say P of them)
-###P lines of this format <L(i): Destination Node> 1<= i <= P
-###**************************
+###
+### The simulator runs as an Interactive application.
+### ----------------------------------------------------------------
+### OUTPUT:
+### Network.Outer.dot - a DOT format file containing graphical representation of outer topology
+### Network.<InnerID>.dot - a DOT format file for each inner topology's graph
+###
+### The simulator will output the routing in the format:
+### Node <(Switch)>?: <NodeID>, VC: <VCID>
+### For as many nodes as are encountered while routing.
+###
+### The Node IDs are defined in the respective *inner* DOT files.
+### Note for outer nodes (Head nodes), the ID is not as indicated in the Outer DOT file,
+### it is the ID in corresponding inner DOT file, the one which starts with "O" (Outer)
+### Non-head IDs start with "I".
+### -----------------------------------------------------------------
+### DEPENDENCIES:
+### networkx, pydot - for graph representation and DOT file generation respectively
+### -----------------------------------------------------------------
+### CONVENTION FOR NODE IDS:
+###   if connects to outside network
+###      O<outID><DELIMITER><inID>
+###      binary encoding: 1 <outID bits> <inID bits>
+###      example: outside max nodes = 16, inside max nodes = 16
+###      1 oooo z iiii
+###      1 0101   0011
+###   else
+###      I<outID><DELIMITER><inID>
+###      binary encoding: 0 <outID bits> <inID bits>
+###      example: continued
+###      0 0000   0010
+### 
+### Switches are given IDs but not treated as Nodes when routing
+### inID and outID are tuples of integers (in mesh, butterfly, foldedtorus)
+### -----------------------------------------------------------------
 
-### DEPENDENCIES: networkx, pydot
 
-###Network types: RCMBFH (Ring Chain Mesh Butterfly FoldedTorus Hypercube)
+###################
+####  IMPORTS  ####
+###################
 
-
-#### IMPORTS
-
-
+# log2 used for calculating stage count in butterfly network
 from math import log2
+# pydot is imported by nx when calling its dot output function
 import networkx as nx
 
-# for actual network, convention for
-# node name: if connects to outside network
-#               1<outID><DELIMITER><inID>
-#               binary encoding: 1 <outID bits> <inID bits>
-#               example: outside max nodes = 16, inside max nodes = 16
-#               1 oooo ccc iiii
-#               1 0101     0011
-#            else
-#               0<outID><DELIMITER><inID>
-#               binary encoding: 0 <outID bits> <inID bits>
-#               example: continued
-#               0 0000     0010
 
 
 
-#### CLASSES
+##############################
+####  SUPPORTING CLASSES  ####
+##############################
 
-
-
+# Class which stores extra data for a Node
+# - generateID: generates an ID for a node, given the parameters
 class Node:
     def __init__(self, isHead, headID, inClass, inID, isSwitch = False):
         # is this node the head node of its tile?
@@ -78,6 +93,7 @@ class Node:
       else:
         return 'I' + headID + DELIMITER + inID
 
+# Class which stores data about a topology
 class Topology:
   def __init__(self, isOuter, headID, topoClass, topoParams, topoGraph):
     # is it an outer topology or inner?
@@ -93,9 +109,10 @@ class Topology:
 
 
 
-#### GLOBALS
 
-
+###################
+####  GLOBALS  ####
+###################
 
 # This object stores the outer topology
 outerTopology = {}
@@ -106,111 +123,124 @@ DELIMITER = 'Z'
 # The input files
 file1 = open(r"L1Topology.txt","r")  
 file2 = open(r"L2Topology.txt","r")
-L1 = file1.read()        # Read the L1 topology file to find the top layer topology
-
-# The list final_nodes stores all the connections to a particular nodes (a list of list)
-# The NodeID for each node is N<i>, where <i> is its position in the final_nodes list
 
 
 
-#### TOPOLOGY GENERATOR FUNCTIONS
 
-
+##############################################
+####  INNER TOPOLOGY GENERATOR FUNCTIONS  ####
+##############################################
 
 # Function to generate the tile for a chain type L2 connection
-# f_nodes in the pointer to the first node in the particular tile in the final_nodes list
 # n is the length of the chain
+# id is the head id for this tile - note this is not the actual id for the head node
 def chain_gen(n, id):
-    thisClass = 'C'
-    thisParams = (n, )
-    thisGraph = nx.Graph();
-    thisTopology = Topology(False, '', thisClass, thisParams, thisGraph);
+  # Create topology object
+  thisClass = 'C'
+  thisParams = (n, )
+  thisGraph = nx.Graph();
+  # In order: not outer topology, no head node id defined, class is thisClass,
+  #           params are thisParams, graph representation is thisGraph
+  thisTopology = Topology(False, '', thisClass, thisParams, thisGraph);
 
-    # List which stores a list of nodes connected to each node in the tile
-    # Trivial case of one node. It isn't connected to anything
-    if n == 1:
-        node = Node(True, id, thisClass, '')
-        thisGraph.add_node(node.id, exdata=node)
-        thisTopology.headID = node.id
-    else :
-        #Add nodes
-        for i in range(0, n):
-          isHead = False
-          if(i == int(n/2)):
-            isHead = True
-            thisTopology.headID = Node.generateID(True, id, thisClass, str(i))
-          cnode = Node(isHead, id, thisClass, str(i))
-          thisGraph.add_node(cnode.id, exdata=cnode)
+  # Trivial case of one node. It isn't connected to anything
+  if n == 1:
+    # Special case of an ID: this node has a blank innerID 
+    node = Node(True, id, thisClass, '')
+    # Add node to topology's graph rep
+    thisGraph.add_node(node.id, exdata=node)
+    # Set this node as the head node
+    thisTopology.headID = node.id
+  else :
+    # Add nodes
+    for i in range(0, n):
+      isHead = False
+      # If we encounter a head node
+      if(i == int(n/2)):
+        isHead = True
+        thisTopology.headID = Node.generateID(True, id, thisClass, str(i))
 
-        #Add edges between nodes
-        for i in range(0, n-1):
-          myID = Node.generateID((i == int(n/2)), id, thisClass, str(i))
-          nextID = Node.generateID(((i+1) == int(n/2)), id, thisClass, str(i+1))
+      # Generate a node
+      cnode = Node(isHead, id, thisClass, str(i))
+      # Add it
+      thisGraph.add_node(cnode.id, exdata=cnode)
 
-          thisGraph.add_edge(myID, nextID)
+    # Add edges between nodes
+    for i in range(0, n-1):
+      # Generate IDs for current and immediately next node
+      myID = Node.generateID((i == int(n/2)), id, thisClass, str(i))
+      nextID = Node.generateID(((i+1) == int(n/2)), id, thisClass, str(i+1))
 
-    #Returning the tile and pointer to head_node
-    innerTopologies[id] = thisTopology
+      # Add an undirected link (nx.Graph() is undirected)
+      thisGraph.add_edge(myID, nextID)
+
+  # Add this topology to the innerTopologies dict
+  innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a ring type L2 connection
 # n is the length of the ring
+# id is the head id for this tile
 def ring_gen(n, id):
-    thisClass = 'R'
-    thisParams = (n, )
-    thisGraph = nx.Graph()
-    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph)
-    
-    #Trivial case of one node
-    if n == 1:
-      node = Node(True, id, thisClass, '')
-      thisGraph.add_node(node.id, exdata=node)
-      thisTopology.headID = node.id
-    #Ring with only two nodes. The nodes are connected to each other
-    if n == 2:
-      #Generate and add the two nodes
-      node1 = Node(False, id, thisClass, '0')
-      node2 = Node(True, id, thisClass, '1')
-      thisGraph.add_node(node1.id, exdata=node1)
-      thisGraph.add_node(node2.id, exdata=node2)
-      thisTopology.headID = node2.id
-      #Link them
-      thisGraph.add_edge(node1.id, node2.id)
+  # Create topology object
+  thisClass = 'R'
+  thisParams = (n, )
+  thisGraph = nx.Graph()
+  thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph)
+  
+  # Trivial case of one node
+  if n == 1:
+    node = Node(True, id, thisClass, '')
+    thisGraph.add_node(node.id, exdata=node)
+    thisTopology.headID = node.id
 
-    #Non trivial case
-    else :
-      #Adding nodes, P1: headnode
-      headnode = Node(True, id, thisClass, '0')
-      thisGraph.add_node(headnode.id, exdata=headnode)
-      thisTopology.headID = headnode.id
-      #Adding nodes, P2: others
-      for i in range(1, n):
-        cnode = Node(False, id, thisClass, str(i))
-        thisGraph.add_node(cnode.id, exdata=cnode)
+  # Ring with only two nodes. The nodes are connected to each other
+  if n == 2:
+    # Generate and add the two nodes
+    node1 = Node(False, id, thisClass, '0')
+    node2 = Node(True, id, thisClass, '1')
+    thisGraph.add_node(node1.id, exdata=node1)
+    thisGraph.add_node(node2.id, exdata=node2)
+    # Set head in topology object, as latter node
+    thisTopology.headID = node2.id
+    # Link them
+    thisGraph.add_edge(node1.id, node2.id)
 
-      #Adding links except to head
-      for i in range(1, n-1):
-        myID = Node.generateID(False, id, thisClass, str(i))
-        nextID = Node.generateID(False, id, thisClass, str(i + 1))
-        thisGraph.add_edge(myID, nextID)
-      #Adding links to head
-      thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
-      thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
+  # Non trivial case
+  else :
+    # Adding nodes, part 1: headnode
+    headnode = Node(True, id, thisClass, '0')
+    thisGraph.add_node(headnode.id, exdata=headnode)
+    thisTopology.headID = headnode.id
+    # Adding nodes, part 2: others
+    for i in range(1, n):
+      cnode = Node(False, id, thisClass, str(i))
+      thisGraph.add_node(cnode.id, exdata=cnode)
 
-    innerTopologies[id] = thisTopology
+    # Adding links except to head
+    for i in range(1, n-1):
+      myID = Node.generateID(False, id, thisClass, str(i))
+      nextID = Node.generateID(False, id, thisClass, str(i + 1))
+      thisGraph.add_edge(myID, nextID)
 
+    # Adding links to head
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
+
+  # Add this topology to inner topologies dict
+  innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a hypercube type L2 connection
 # Dimension is forced as 3 (8 nodes)
-# f_nodes is the pointer to the first node in the Hypercube
+# id is head id for the tile
 def hypercube_gen(id):
     thisClass = 'H'
     thisParams = None
     thisGraph = nx.Graph();
     thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
     
-    #Create and add nodes
+    # Create and add nodes
     nodes = [Node(True, id, thisClass, '0')]
     thisGraph.add_node(nodes[0].id, exdata=nodes[0])
     thisTopology.headID = nodes[0].id
@@ -219,38 +249,44 @@ def hypercube_gen(id):
       nodes.append(Node(False, id, thisClass, str(i)))
       thisGraph.add_node(nodes[i].id, exdata=nodes[i])
 
+    # Now add links
     for i in range(8):
-      #Edges by inverting 1 bit in each position
-      #3 edges for our 3d hypercube
+      # Edges are made by inverting 1 bit in each position
+      # 3 edges for our 3d hypercube
       thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id)
       thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id)
       thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id)
 
+    # Add inner topology to dict
     innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a mesh type L2 connection
 # Dimension of n x m (n rows and m columns)
-# f_nodes is the pointer to the first node in the Hypercube
+# id is head id for the tile
 def mesh_gen(n, m, id):
     thisClass = 'M'
     thisParams = (n, m)
     thisGraph = nx.Graph();
     thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
+    # Given i, j this function checks if it is a head node according to params
     def checkHead(ix, jx):
       return (ix == int(n/2)) and (jx == (int(m/2)))
 
-    #Add nodes
-    for i in range(n):
-      for j in range(m):
+    # Add nodes
+    for i in range(n): # each row
+      for j in range(m): # each column
+        # Add node to graph
         isHead = checkHead(i, j)
-        if(isHead):
-          thisTopology.headID = Node.generateID(True, id, thisClass, str(i) + DELIMITER + str(j))
         cnode = Node(isHead, id, thisClass, str(i) + DELIMITER + str(j))
         thisGraph.add_node(cnode.id, exdata=cnode)
 
-    #Checks if node is valid
+        # If headnode, set topology property
+        if(isHead):
+          thisTopology.headID = cnode.id
+
+    # Checks if node i, j are valid
     def checkNode(ix, jx):
       if(ix < 0 or jx < 0):
         return False
@@ -258,154 +294,196 @@ def mesh_gen(n, m, id):
         return False
       return True
 
-    #Safely adds edges - if dest node exists, and accounting for headID
+    # Safely adds edges - if dest node exists, and accounting for headID
     def addEdgeSafe(isrc, jsrc, idest, jdest):
+      # If not safe, return
       if(not checkNode(idest, jdest)):
         return
+      # Generate IDs for source and destination
       srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
       destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+      # Add edge between src and dest
       thisGraph.add_edge(srcID, destID)
 
-    #Add edges
+    # Add edges
     for i in range(n):
       for j in range(m):
+        # Add edge top, bottom, left and right. Function will take care of issues
         addEdgeSafe(i, j, i - 1, j)
         addEdgeSafe(i, j, i + 1, j)
         addEdgeSafe(i, j, i, j - 1)
         addEdgeSafe(i, j, i, j + 1)
 
+    # Add topology to dict
     innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a butterfly type L2 connection
+# n is the total number of nodes on left and right
+# id is the head id for this tile
 def butterfly_gen(n, id):
   thisClass = 'B'
   thisParams = (n, )
   thisGraph = nx.Graph();
   thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
-  # node internal IDs: <num1> :
+  # node internal IDs: <num1> where
   #   num1 identifies the node index
-  # switch internal IDs: <num1> Z <num2> :
+  # switch internal IDs: <num1><DELIMITER><num2> where
   #   num1 identifies the stage in the butterfly
   #   num2 identifies the switch in the stage
 
+  # Add headID (we know where head is)
   thisTopology.headID = Node.generateID(True, id, thisClass, str(0))
+  # Check if this node is the head node
   def checkHead(stage, index):
+    # We've selected the 0th node as head node
     if(stage == 0 and index == 0):
       return True
     return False
 
-  #n/2 nodes on left, n/2 on right, n/4 switches in each stage
-  #hence, log2(n/4) + 1 = log2(n) - 1 layers of switches
-  #and 2 layers of nodes, total log2(n) + 1 layers
+  # n/2 nodes on left, n/2 on right, n/4 switches in each stage
+  # hence, log2(n/4) + 1 = log2(n) - 1 layers of switches
+  # and 2 layers of nodes, total log2(n) + 1 layers
   n_stages = int(log2(n)) + 1
 
-  #Add nodes
+  # Add nodes
   for i in range(0, n):
+    # Stage differs based on i, and index in stage too, send accordingly to checkHead
     cnode = Node(checkHead(0 if i < int(n/2) else n_stages - 1, i % int(n/2)),
                   id, thisClass, str(i))
     thisGraph.add_node(cnode.id, exdata=cnode)
-  #Add switches
+
+  # Add switches
   for i in range(1, n_stages - 1):
+    # n/4 switches in each stage!
     for j in range(int(n/4)):
+      # Note the last parameter is essential. We're giving IDs to switches too, but won't consider them as nodes
       cswitch = Node(False, id, thisClass, str(i) + DELIMITER + str(j), True)
       thisGraph.add_node(cswitch.id, exdata=cswitch)
   
-  #Add edges from input to first switch layer
+  # Add edges from input to first switch layer
   for i in range(0, int(n/2)):
+    # Generate IDs of target node and switch
     nodeID = Node.generateID(checkHead(0, i), id, thisClass, str(i))
     switchID = Node.generateID(False, id, thisClass, str(1) + DELIMITER + str(int(i/2)), True)
     thisGraph.add_edge(nodeID, switchID)
   
-  #Add edges from last switch layer to output
+  # Add edges from last switch layer to output
   for i in range(0, int(n/4)):
+    # Generate IDs of target switch and nodes
     switchID = Node.generateID(False, id, thisClass, str(n_stages - 2) + DELIMITER + str(i), True)
     nodeID1 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i)))
     nodeID2 = Node.generateID(False, id, thisClass, str(int(n/2) + (2*i + 1)))
     
+    # Add edges to both nodes from switch
     thisGraph.add_edge(switchID, nodeID1)
     thisGraph.add_edge(switchID, nodeID2)
 
+  # This method returns the switch index for the next layer indirect switch according to current switch
   def nextSwitch(current, stage):
+    # Invert one bit according to stage
     bit = 1 << (stage - 1)
     return bit ^ current
 
-  #Add edges between switches in the inner layers
+  # Add edges between switches in the inner layers
   for i in range(1, n_stages - 2):
     for j in range(0, int(n/4)):
+      # This switch's ID
       myID = Node.generateID(False, id, thisClass, str(i) + DELIMITER + str(j), True)
+      # Next Switch IDs
       nextIDDirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(j), True)
       nextIDIndirect = Node.generateID(False, id, thisClass, str(i + 1) + DELIMITER + str(nextSwitch(j, i)), True)
-      
+      # Adding edges
       thisGraph.add_edge(myID, nextIDDirect)
       thisGraph.add_edge(myID, nextIDIndirect)
 
+  # Add topology to dict
   innerTopologies[id] = thisTopology
 
 
 # Function to generate the tile for a folded torus type L2 connection
 # Dimension of n x m (n rows and m columns)
+# id for the head id of this tile
 def folded_torus_gen(n, m, id):
-    thisClass = 'F'
-    thisParams = (n, m)
-    thisGraph = nx.Graph();
-    thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
+  thisClass = 'F'
+  thisParams = (n, m)
+  thisGraph = nx.Graph();
+  thisTopology = Topology(False, 0, thisClass, thisParams, thisGraph);
 
-    # Node ID: <num1> <DELIM> <num2>
-    #   num1 -> row of the node
-    #   num2 -> column of the node
+  # Node ID: <num1> <DELIM> <num2>
+  #   num1 -> row of the node
+  #   num2 -> column of the node
 
-    def checkHead(i, j):
-      if(i == 0 and j == 0):
-        thisTopology.headID = Node.generateID(True, id, thisClass, '0Z0')
-        return True
-      return False
+  # This function checks if the i, j point to a head
+  def checkHead(i, j):
+    # Choosing first node as head for this topology
+    if(i == 0 and j == 0):
+      thisTopology.headID = Node.generateID(True, id, thisClass, '0Z0')
+      return True
+    return False
 
-    #Add nodes
-    for i in range(n):
-      for j in range(m):
-        cnode = Node(checkHead(i, j), id, thisClass, str(i) + DELIMITER + str(j))
-        thisGraph.add_node(cnode.id, exdata=cnode)
-
-    def safeAddEdge(isrc, jsrc, idest, jdest):
-      idest = (idest + n) % n
-      jdest = (jdest + m) % m
-
-      srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
-      destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
-      thisGraph.add_edge(srcID, destID)
-
-    #Add edges in columns
+  # Add nodes
+  for i in range(n):
     for j in range(m):
-      #Add link to immediately next of first node
-      safeAddEdge(0, j, 1, j)
-      #Add links in internal nodes
-      for i in range(int(n / 2) - 1):
-        safeAddEdge(2*i, j, 2*i+2, j)
-        safeAddEdge(2*i+1, j, 2*i+3, j)
-      #Add link to prev of last node
-      safeAddEdge(n-1, j, n-2, j)
-    
-    #Add edges in rows
-    for i in range(n):
-      #Add link to immediately next of first node
-      safeAddEdge(i, 0, i, 1)
-      #Add links in internal nodes
-      for j in range(int(m / 2) - 1):
-        safeAddEdge(i, 2*j, i, 2*j+2)
-        safeAddEdge(i, 2*j+1, i, 2*j+3)
-      #Add link to prev of last node
-      safeAddEdge(i, m-1, i, m-2)
+      cnode = Node(checkHead(i, j), id, thisClass, str(i) + DELIMITER + str(j))
+      thisGraph.add_node(cnode.id, exdata=cnode)
 
-    innerTopologies[id] = thisTopology
+  # Safely add an edge between source (i,j) and dest (i,j)
+  def safeAddEdge(isrc, jsrc, idest, jdest):
+    # Safety: keeping indices within limits
+    idest = (idest + n) % n
+    jdest = (jdest + m) % m
 
+    # Generate IDs and link the nodes
+    srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
+    destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+    thisGraph.add_edge(srcID, destID)
+
+  # Add edges in columns
+  for j in range(m):
+    # Add link to immediately next of first node
+    safeAddEdge(0, j, 1, j)
+    # Add links in internal nodes
+    for i in range(int(n / 2) - 1):
+      safeAddEdge(2*i,   j, 2*i+2, j)
+      safeAddEdge(2*i+1, j, 2*i+3, j)
+    # Add link to prev of last node
+    safeAddEdge(n-1, j, n-2, j)
+  
+  # Add edges in rows
+  for i in range(n):
+    # Add link to immediately next of first node
+    safeAddEdge(i, 0, i, 1)
+    # Add links in internal nodes
+    for j in range(int(m / 2) - 1):
+      safeAddEdge(i, 2*j, i, 2*j+2)
+      safeAddEdge(i, 2*j+1, i, 2*j+3)
+    # Add link to prev of last node
+    safeAddEdge(i, m-1, i, m-2)
+
+  # Add this topology to dict
+  innerTopologies[id] = thisTopology
+
+
+
+
+###########################################
+####  OUTER TOPOLOGY HELPER FUNCTIONS  ####
+###########################################
+
+# Generates inner topology given the head id
 def genInner(id):
+  # Read tile info from L2Topology file
   tileInfo = file2.readline()
+  # Extract network type, dimensions
   network_type, n, m = tileInfo.split(',')
   n = int(n)
   m = int(m)
   
+  # Generate according to network_type
+  # Note these generators automatically add the generated Topology object to innerTopologies dict
+  # So we can access them right away after genInner is done running
   if network_type == 'R':
     ring_gen(n, id)
   elif network_type == 'C':
@@ -419,13 +497,26 @@ def genInner(id):
   elif network_type == 'H':
     hypercube_gen(id)
 
+# Gets the head node data for the topology with the given head id
 def getHeadNode(index):
   srcTopo = innerTopologies[index]
   srcHeadID = srcTopo.headID
   srcHeadNode = srcTopo.topoGraph.nodes[srcHeadID]
   return srcHeadNode['exdata']
 
-## The following functions handle linkages for the L1 topology. The head nodes are already generated by the corresponding L2 topology functions, and the following functions just add additional head node <-> head node linkages
+
+
+
+##############################################
+####  OUTER TOPOLOGY GENERATOR FUNCTIONS  ####
+##############################################
+
+# Each generator generates the inner topologies, then uses node data from the head nodes of these
+#   in the outer topology graph. They don't generate new nodes, except for Butterfly which generates
+#   Node objects for switches (however these aren't treated as nodes).
+# These call genInner() for each "node addition" of their own, then fetch the head node for the
+#   topology just generated.
+# Return values are the outerTopology object
 
 # For ring type L1 topology
 def ring_head_gen(n):
@@ -434,8 +525,9 @@ def ring_head_gen(n):
   thisGraph = nx.Graph()
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph)
 
+  # Two node chain case
   if n == 2:
-    #Generate the topologies
+    # Generate the topologies
     genInner('0')
     node0 = getHeadNode('0')
     thisGraph.add_node('0', exdata=node0)
@@ -443,18 +535,19 @@ def ring_head_gen(n):
     node1 = getHeadNode('1')
     thisGraph.add_node('1', exdata=node1)
 
-    #Add edge between them
+    # Add edge between them
     thisGraph.add_edge('0', '1')
 
-  #Non trivial case
+  # Non-trivial case
   else :
-    #Adding nodes
+    # Adding nodes
     for i in range(n):
+      # Generate each one, get its head node, add it to our graph
       genInner(str(i))
       node = getHeadNode(str(i))
       thisGraph.add_node(str(i), exdata=node)
 
-    #Adding links
+    # Adding links
     for i in range(n):
       thisGraph.add_edge(str(i), str((i + 1) % n))
 
@@ -469,16 +562,21 @@ def chain_head_gen(n):
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
   if n >= 2:
+    # Generate nodes
     for i in range(n):
       genInner(str(i))
       node = getHeadNode(str(i))
       thisGraph.add_node(str(i), exdata=node)
 
+    # Add links
     for i in range(0, n-1):
       thisGraph.add_edge(str(i), str(i+1))
+
   else:
-    print("Bad dimensions for outer topology as chain")
+    # Sanity check
+    print("Invalid dimensions for outer topology as chain")
     exit()
+
   return thisTopology
 
 
@@ -488,19 +586,22 @@ def hypercube_head_gen():
   thisParams = None
   thisGraph = nx.Graph();
   thisTopology = Topology(True, '', thisClass, thisParams, thisGraph);
-  n = 8
+  n = 8 # Fixed dimensions for hypercube
 
+  # Generate nodes
   for i in range(n):
     genInner(str(i))
     node = getHeadNode(str(i))
     thisGraph.add_node(str(i), exdata=node)
   
+  # Add links
   for i in range(n):
     thisGraph.add_edge(str(i), str(i ^ 1))
     thisGraph.add_edge(str(i), str(i ^ 2))
     thisGraph.add_edge(str(i), str(i ^ 4))
 
   return thisTopology
+
 
 # For mesh type L1 topology
 def mesh_head_gen(n,m):
@@ -509,15 +610,18 @@ def mesh_head_gen(n,m):
   thisGraph = nx.Graph();
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
+  # This returns the head id given i, j (Note not head node id, that is generated by inner topo generators)
   def genID(ix, jx):
     return str(ix) + DELIMITER + str(jx)
 
+  # Generate nodes
   for i in range(n):
     for j in range(m):
       genInner(genID(i, j))
       node = getHeadNode(genID(i, j))
       thisGraph.add_node(genID(i, j), exdata=node)
 
+  # Checks if node i, j are valid
   def checkNode(ix, jx):
     if(ix < 0 or jx < 0):
       return False
@@ -525,11 +629,13 @@ def mesh_head_gen(n,m):
       return False
     return True
 
+  # Safely add an edge, just like in mesh_gen
   def addEdgeSafe(isrc, jsrc, idest, jdest):
     if(not checkNode(idest, jdest)):
       return
     thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest))
 
+  # Add edges
   for i in range(n):
     for j in range(m):
       addEdgeSafe(i, j, i - 1, j)
@@ -547,30 +653,33 @@ def butterfly_head_gen(n):
   thisGraph = nx.Graph();
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
+  # Number of stages, like in butterfly_gen
   n_stages = int(log2(n)) + 1
 
+  # Generate nodes only
   for i in range(0,n):
     genInner(str(i))
     cnode = getHeadNode(str(i))
     thisGraph.add_node(str(i), exdata=cnode)
 
-    # switch names: <num1> <DELIM> <num2> :
-    #   num1 identifies the stage in the butterfly
-    #   num2 identifies the switch in the stage
-
+  # Returns an ID of a switch, given stage and index
+  # switch names: <num1> <DELIM> <num2> :
+  #   num1 identifies the stage in the butterfly
+  #   num2 identifies the switch in the stage
   def switchID(stage, index):
     return str(stage) + DELIMITER + str(index)
 
+  # Generate switches (Note creates Node objects)
   for i in range(1, n_stages - 1):
     for j in range(0, int(n/4)):
       thisGraph.add_node(str(i), exdata=Node(True, switchID(i, j), thisClass, '', True))
   
-  #Add edges from input to first switch layer
+  # Add edges from input to first switch layer
   for i in range(0, int(n/2)):
     myID = Node.generateID(True, switchID(1, int(i/2)), thisClass, '', True)
     thisGraph.add_edge(str(i), myID)
   
-  #Add edges from last switch layer to output
+  # Add edges from last switch layer to output
   for i in range(0, int(n/4)):
     myID = Node.generateID(True, switchID(n_stages - 2, i), thisClass, '', True)
     nodeID1 = str(int(n/2) + 2*i)
@@ -579,11 +688,12 @@ def butterfly_head_gen(n):
     thisGraph.add_edge(myID, nodeID1)
     thisGraph.add_edge(myID, nodeID2)
 
+  # Returns index of next stage indirect switch connected to given switch
   def nextSwitch(current, stage):
     bit = 1 << (stage - 1)
     return bit ^ current
 
-  #Add edges between switches in the inner layers
+  # Add edges between switches in the inner layers
   for i in range(1, n_stages - 2):
     for j in range(0, int(n/4)):
       myID = Node.generateID(True, switchID(i, j), thisClass, '', True)
@@ -603,16 +713,18 @@ def folded_torus_head_gen(n,m):
   thisGraph = nx.Graph();
   thisTopology = Topology(True, 0, thisClass, thisParams, thisGraph);
 
+  # Given i,j return ID of node
   def genID(i, j):
     return str(i) + DELIMITER + str(j)
 
-  #Add nodes
+  # Add nodes
   for i in range(n):
     for j in range(m):
       genInner(genID(i, j))
       cnode = getHeadNode(genID(i, j))
       thisGraph.add_node(genID(i, j), exdata=cnode)
 
+  # Safely add edge, like in folded_torus_gen
   def safeAddEdge(isrc, jsrc, idest, jdest):
     idest = (idest + n) % n
     jdest = (jdest + m) % m
@@ -621,31 +733,36 @@ def folded_torus_head_gen(n,m):
     destID = genID(idest, jdest)
     thisGraph.add_edge(srcID, destID)
 
-  #Add edges in columns
+  # Add edges in columns
   for j in range(m):
-    #Add link to immediately next of first node
+    # Add link to immediately next of first node
     safeAddEdge(0, j, 1, j)
-    #Add links in internal nodes
+    # Add links in internal nodes
     for i in range(int(n / 2) - 1):
       safeAddEdge(2*i, j, 2*i+2, j)
       safeAddEdge(2*i+1, j, 2*i+3, j)
-    #Add link to prev of last node
+    # Add link to prev of last node
     safeAddEdge(n-1, j, n-2, j)
   
-  #Add edges in rows
+  # Add edges in rows
   for i in range(n):
-    #Add link to immediately next of first node
+    # Add link to immediately next of first node
     safeAddEdge(i, 0, i, 1)
-    #Add links in internal nodes
+    # Add links in internal nodes
     for j in range(int(m / 2) - 1):
       safeAddEdge(i, 2*j, i, 2*j+2)
       safeAddEdge(i, 2*j+1, i, 2*j+3)
-    #Add link to prev of last node
+    # Add link to prev of last node
     safeAddEdge(i, m-1, i, m-2)
 
   return thisTopology
 
 
+
+
+###########################
+####  OUTPUT FUNCTION  ####
+###########################
 
 ## Function to print the network.dot file
 def print_func():
@@ -655,13 +772,19 @@ def print_func():
 
 
 
-### Start of parsing ###
 
-# Assign values from the L1 topology
+#########################################
+####  NETWORK GENERATION INITIATION  ####
+#########################################
+
+# Read the L1 topology file to find the top layer topology
+L1 = file1.read()
+# Extract values from the L1 topology
 L1_network_type, L1_n, L1_m = L1.split(",")
 L1_n = int(L1_n)
 L1_m = int(L1_m)
 
+# Generate head according to type
 if L1_network_type == "R":
   outerTopology = ring_head_gen(L1_n)    
 elif L1_network_type == "C":
@@ -675,20 +798,17 @@ elif L1_network_type == "F":
 elif L1_network_type == "H":
   outerTopology = hypercube_head_gen()
 
+# Output the DOT files for the generated network
 print_func()
 
 
-#### Routing
 
 
-def getTopo(id, inner:bool):
-  if(outerTopology.topoGraph.nodes.get(id) != None):
-    return outerTopology.topoGraph.nodes[id]
-  for q in innerTopologies:
-    if(innerTopologies[q].topoGraph.nodes.get(id) != None):
-      return innerTopologies[q].topoGraph.nodes[id]
-  return None
+####################################
+####  ROUTING HELPER FUNCTIONS  ####
+####################################
 
+# Get a Node object from any topology given its id
 def getNode(id):
   if(outerTopology.topoGraph.nodes.get(id) != None):
     return outerTopology.topoGraph.nodes[id]
@@ -697,101 +817,139 @@ def getNode(id):
       return innerTopologies[q].topoGraph.nodes[id]
   return None
 
-# returns nextID, vcID
-def route_mesh(src:Node, dest:Node, outside:bool):
+
+
+
+#############################
+####  ROUTING FUNCTIONS  ####
+#############################
+
+# Routing functions work in a tick-based fashion. When called, they route a flit once.
+# Butterfly routing function does printing itself, for switches, considering practically they aren't treated as nodes
+
+# Route a flit from src to dest, with src having received it in vcid, and routing done in (outside?outer:inner) topology.
+# Mesh routing
+def route_mesh(src:Node, dest:Node, outside:bool, vcid=''):
+  # Get ID according to routing being done outside or in
+  # inID for a node doesn't have its headID or isHead components, which its id does
   idsrc = src.headID if outside else src.inID
   iddest = dest.headID if outside else dest.inID
 
+  # i,j's for src, dest, found from IDs
   isrc, jsrc = list(map(lambda x : int(x), idsrc.split(DELIMITER)))
   idest, jdest = list(map(lambda x : int(x), iddest.split(DELIMITER)))
 
+  # Topology object of the source node
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
+  # nextid, vcid will be returned
   nextid = ''
+  # H indicates a VC of a head node, being used for outer routing
   vcid = 'H0' if outside else '0'
-  if(isrc < idest):
-    isrc += 1
-  elif(isrc > idest):
-    isrc -= 1
-  elif(jsrc < jdest):
-    jsrc += 1
-  else:
+  
+  # X routing
+  if(jsrc < jdest):
+    jsrc += 1 # move closer to destination j
+  elif(jsrc > jdest):
     jsrc -= 1
+  # These statements checked if jsrc == jdest, hence X-Y routing
+  elif(isrc < idest):
+    isrc += 1
+  else:
+    isrc -= 1
 
+  # Determining nextID according to transformed isrc, jsrc
   if(outside):
+    # If outside, find using innerTopologies' headIDs
     nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
   else:
+    # If inside, assume it is not a head node
     nextid = Node.generateID(False, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
+    # If not found, our assumption was wrong. It is a head node, set nextID accordingly
     if(srcTopo.topoGraph.nodes.get(nextid) == None):
       nextid = Node.generateID(True, src.headID, src.inClass, str(isrc) + DELIMITER + str(jsrc))
   
+  # Return routed info
   return nextid, str(vcid)
 
+# Folded Torus routing
 def route_folded_torus(src:Node, dest:Node, outside:bool, vcid=''):
+  # Get IDs
   idsrc = src.headID if outside else src.inID
   iddest = dest.headID if outside else dest.inID
 
+  # Extract location info
   isrc, jsrc = list(map(lambda x : int(x), idsrc.split(DELIMITER)))
   idest, jdest = list(map(lambda x : int(x), iddest.split(DELIMITER)))
 
+  # Get source topo
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
+  # vcset: if vcid has been shifted to 1, we don't want it being shifted back to 0
+  #        if vcset is true, use vcid as given, else generate a new one
   vcset = False
+
+  # Check if vcid supplied is valid
   if(len(vcid > 0)):
+    # Check if it was shifted to 1
     vcset = (vcid[-1] == '1')
     if(vcset):
-      # do not absorb outer vcid when going into an inner topology from outside
+      # If it was shifted:
+      #   do not absorb outer vcid when going into an inner topology from outside
       if((not outside) and vcid[0] == 'H'):
         vcset = False
-      # do not absorb inner vcid when going outside the inner topology
+      #   do not absorb inner vcid when going outside the inner topology
       if((outside) and vcid[0] != 'H'):
         vcset = False
+  
+  # If vcset is false, initialize vcid
   if(not vcset):
     vcid = 'H' if outside else ''
 
+  # Cache i,j to check later if they changed
   icache, jcache = isrc, jsrc
+
+  # n, m are needed to determine shorter arc
   n, m = srcTopo.topoParams
-  if(isrc < idest):
-    if(idest - isrc > (isrc + n - idest)):
-      isrc -= 1
-    else:
-      isrc += 1
-  elif(isrc > idest):
-    if(isrc - idest > (idest + n - isrc)):
-      isrc += 1
-    else:
-      isrc -= 1
-  elif(jsrc < jdest):
+
+  # X routing with shortest arc
+  if(jsrc < jdest):
+    # Inc/Dec according to shortest arc
     if(jdest - jsrc > (jsrc + m - jdest)):
       jsrc -= 1
     else:
       jsrc += 1
-  else:
+  elif(jsrc > jdest):
     if(jsrc - jdest > (jdest + n - jsrc)):
       jsrc += 1
     else:
       jsrc -= 1
+  # Dateline routing
+  elif(isrc != idest):
+    isrc += 1
 
-  if(isrc < 0):
-    isrc = n - 1
-  elif(isrc == n):
-    isrc = 0
-  
+  # Jumping from start to end of a ring/vice-versa
   if(jsrc < 0):
     jsrc = m - 1
   elif(jsrc == m):
     jsrc = 0
 
+  if(isrc == n):
+    isrc = 0
+
+  # Dateline routing: setting vc if not previously set
   if(not vcset):
-    if(jsrc != jcache):
-      if(jsrc <= 1):
+    if(isrc != icache):
+      # If i was changed and is now 0, then change VC
+      if(isrc == 0):
         vcid += '1'
       else:
         vcid += '0'
     else:
       vcid += '0'
 
+  # Getting nextID appropriately
   if(outside):
     nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
   else:
@@ -801,20 +959,26 @@ def route_folded_torus(src:Node, dest:Node, outside:bool, vcid=''):
   
   return nextid, str(vcid)
 
+# Chain routing
 def route_chain(src:Node, dest:Node, outside:bool, vcid):
+  # Get IDs
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
+  # Get source topo
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
+  # VC's only used directionally here
   nextid = ''
   vcid = 'H' if outside else ''
 
+  # If going right, VC 0, else VC 1
   if(idsrc < iddest):
     idsrc += 1; vcid += '0'
   else:
     idsrc -= 1; vcid += '1'
 
+  # Get nextID
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
   else:
@@ -824,14 +988,19 @@ def route_chain(src:Node, dest:Node, outside:bool, vcid):
   
   return nextid, str(vcid)
 
+# Ring routing
 def route_ring(src:Node, dest:Node, outside:bool, vcid):
+  # Get IDs
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
+  # Get source topo
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
   vcset = False
+
+  # Similar check for vcset as in folded torus
   if(len(vcid) > 0):
     vcset = (vcid[-1] == '1')
     if(vcset):
@@ -842,34 +1011,28 @@ def route_ring(src:Node, dest:Node, outside:bool, vcid):
       if((outside) and vcid[0] != 'H'):
         vcset = False
   
+  # Initialize vcid if needed
   if(not vcset):
     vcid = 'H' if outside else ''
 
+  # Needed parameter for routing
   n = srcTopo.topoParams
 
-  if(idsrc < iddest):
-    if(iddest - idsrc > (idsrc + n - iddest)):
-      idsrc -= 1;
-    else:
-      idsrc += 1;
-  else:
-    if(idsrc - iddest > (iddest + n - idsrc)):
-      idsrc += 1;
-    else:
-      idsrc -= 1;
+  # Dateline routing - here just using shortest arc
+  if(idsrc != iddest):
+    idsrc += 1
 
-  if(idsrc < 0):
-    idsrc = n - 1
-  elif(idsrc == n):
+  if(idsrc == n):
     idsrc = 0
 
-  # guaranteed >= 0, hence 0 or 1
+  # Datelne routing - setting VC to 1 if not already set and crossing 0
   if(not vcset):
-    if(idsrc <= 1):
+    if(idsrc == 0):
       vcid += '1'
     else:
       vcid += '0'
 
+  # Get nextid appropriately
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
   else:
@@ -879,13 +1042,14 @@ def route_ring(src:Node, dest:Node, outside:bool, vcid):
   
   return nextid, str(vcid)
 
+# Butterfly routing
+# Note side-effects: This function also prints the switches intermediate directly
 def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
-
-  #This function also prints the switches intermediate directly
-  
+  # Get IDs
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
+  # Get source topo
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
@@ -956,6 +1120,7 @@ def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
             
   return nextid, str(vcid)
 
+# Hypercube routing
 def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
@@ -983,11 +1148,21 @@ def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   
   return nextid, str(vcid)
 
+
+
+################################################
+####  ROUTING SIMULATION SUPPORT FUNCTIONS  ####
+################################################
+
+# Common routing backend: routes once through corresponding topology
 def route_backend(src:Node, dest:Node, outer:bool, vcid):
+  # Find corresponding routingClass
   routingClass = src.inClass
   if(outer):
+    # If routing outside, just use outerTopology object
     routingClass = outerTopology.topoClass
   
+  # Return nextID, vcID by routing using corresponding routing tick
   if(routingClass == 'C'):
     return route_chain(src, dest, outer, vcid)
   elif(routingClass == 'R'):
@@ -1001,57 +1176,106 @@ def route_backend(src:Node, dest:Node, outer:bool, vcid):
   elif(routingClass == 'M'):
     return route_mesh(src, dest, outer, vcid)
 
+  # Shouldn't reach here, sanity check
   print("routing class not found")
   exit()
 
+# Route within a tile only
 def route_inside(src:Node, dest:Node, vcid):
   return route_backend(src, dest, False, vcid)
 
+# Route in outer topology (from head node to head node)
 def route_outside(src:Node, dest:Node, vcid):
   return route_backend(src, dest, True, vcid)
 
-#Replace destination with the tile's head node
+# Route towards head node of the tile from an inner node
 def route_outwards(src:Node, dest:Node, vcid):
+  # Replace destination with src's tile's head node
   dest = innerTopologies[src.headID].topoGraph.nodes[innerTopologies[src.headID].headID]['exdata']
   return route_backend(src, dest, False, vcid)
 
+
+
+
+#################################################
+####  ROUTING SIMULATION FRONTEND FUNCTIONS  ####
+#################################################
+
+# Routing frontend, just routes from some source ID which received flit in VC with vcID, and
+# is routing towards a destination ID
 def route(idsrc, iddest, vcid):
+  # Get the src and dest Node objects
   nodesrc = getNode(idsrc)['exdata']
   nodedest = getNode(iddest)['exdata']
+  # Get head IDs for these nodes' tiles
   tilesrc = nodesrc.headID
   tiledest = nodedest.headID
   
-  #This case: since we're passed unequal src, dest with same head,
-  #           route them within a tile
+  # This case: since we're passed unequal src, dest with same head,
+  #            route them within a tile
   if(tilesrc == tiledest):
     return route_inside(nodesrc, nodedest, vcid)
 
-  #If src is a Head, and heads of tiles differ, route src outside
+  # If src is a Head, and heads of tiles differ, route src outside
   if(nodesrc.isHead):
     return route_outside(nodesrc, nodedest, vcid)
   
-  #If src is not a Head, route it to the head of its tile
+  # If src is not a Head, route it to the head of its tile
   return route_outwards(nodesrc, nodedest, vcid)
 
-
+# Simulates once. Interacts with the user accordingly.
 def simulateOnce():
+  # Get the source ID
+  # User is expected to go through a DOT file to find a favorable source node
   print("Enter source ID (or EXIT to stop): ", end='')
   sourceID = input()
-  vcID = ''
+
+  # Does the user want to exit?
   if(sourceID == "EXIT"):
-    print("\nQuitting...")
-    exit()
+    return False
+
+  # Get the destination ID
   print("\nEnter destination ID: ", end='')
   destID = input()
 
+  # Sanity check
+  if(getNode(sourceID) == None):
+    print("\nSource ID not found!")
+    return False
+  if(getNode(destID) == None):
+    print("\nDestination ID not found!")
+    return False
+
   print("\nRouting...\n")
 
+  vcID = ''
+  # As described
   while(sourceID != destID):
+    # Route once
     nextID, vcID = route(sourceID, destID, vcID)
+    # Print received ID, VCID
     print("Node: " + nextID + ", VC: " + vcID)
+    # Prepare for next tick
     sourceID = nextID
 
-  print("\nRouting complete.\n")
+  print("\nRouting complete.")
+  return True
 
-while True:
-  simulateOnce()
+
+
+
+############################
+####  BEGIN SIMULATION  ####
+############################
+
+INTRO = "Please refer to the generated DOT files (Network.<innerID>.dot) to find favorable node IDs.\n"
+OUTRO = "\nQuitting..."
+
+print(INTRO)
+
+# Keep simulating. simulateOnce() returns False if the user chooses to exit, or we get an error.
+while simulateOnce():
+  print("")
+
+print(OUTRO)
+exit()
