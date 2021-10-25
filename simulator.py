@@ -677,6 +677,10 @@ elif L1_network_type == "H":
 
 print_func()
 
+
+#### Routing
+
+
 def getTopo(id, inner:bool):
   if(outerTopology.topoGraph.nodes.get(id) != None):
     return outerTopology.topoGraph.nodes[id]
@@ -704,18 +708,15 @@ def route_mesh(src:Node, dest:Node, outside:bool):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  vcid = 'H0' if outside else '0'
   if(isrc < idest):
     isrc += 1
-  elif(jsrc < jdest):
-    jsrc += 1
-    vcid += 1
   elif(isrc > idest):
     isrc -= 1
-    vcid += 2
+  elif(jsrc < jdest):
+    jsrc += 1
   else:
     jsrc -= 1
-    vcid += 3
 
   if(outside):
     nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
@@ -726,7 +727,7 @@ def route_mesh(src:Node, dest:Node, outside:bool):
   
   return nextid, str(vcid)
 
-def route_folded_torus(src:Node, dest:Node, outside:bool):
+def route_folded_torus(src:Node, dest:Node, outside:bool, vcid=''):
   idsrc = src.headID if outside else src.inID
   iddest = dest.headID if outside else dest.inID
 
@@ -736,29 +737,41 @@ def route_folded_torus(src:Node, dest:Node, outside:bool):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  vcset = False
+  if(len(vcid > 0)):
+    vcset = (vcid[-1] == '1')
+    if(vcset):
+      # do not absorb outer vcid when going into an inner topology from outside
+      if((not outside) and vcid[0] == 'H'):
+        vcset = False
+      # do not absorb inner vcid when going outside the inner topology
+      if((outside) and vcid[0] != 'H'):
+        vcset = False
+  if(not vcset):
+    vcid = 'H' if outside else ''
 
+  icache, jcache = isrc, jsrc
   n, m = srcTopo.topoParams
   if(isrc < idest):
     if(idest - isrc > (isrc + n - idest)):
-      isrc -= 1; vcid += 2
+      isrc -= 1
     else:
       isrc += 1
-  elif(jsrc < jdest):
-    if(jdest - jsrc > (jsrc + m - jdest)):
-      jsrc -= 1; vcid += 3
-    else:
-      jsrc += 1; vcid += 1
   elif(isrc > idest):
     if(isrc - idest > (idest + n - isrc)):
       isrc += 1
     else:
-      isrc -= 1; vcid += 2
+      isrc -= 1
+  elif(jsrc < jdest):
+    if(jdest - jsrc > (jsrc + m - jdest)):
+      jsrc -= 1
+    else:
+      jsrc += 1
   else:
     if(jsrc - jdest > (jdest + n - jsrc)):
-      jsrc += 1; vcid += 1
+      jsrc += 1
     else:
-      jsrc -= 1; vcid += 3
+      jsrc -= 1
 
   if(isrc < 0):
     isrc = n - 1
@@ -770,6 +783,15 @@ def route_folded_torus(src:Node, dest:Node, outside:bool):
   elif(jsrc == m):
     jsrc = 0
 
+  if(not vcset):
+    if(jsrc != jcache):
+      if(jsrc <= 1):
+        vcid += '1'
+      else:
+        vcid += '0'
+    else:
+      vcid += '0'
+
   if(outside):
     nextid = innerTopologies[str(isrc) + DELIMITER + str(jsrc)].headID
   else:
@@ -779,19 +801,19 @@ def route_folded_torus(src:Node, dest:Node, outside:bool):
   
   return nextid, str(vcid)
 
-def route_chain(src:Node, dest:Node, outside:bool):
+def route_chain(src:Node, dest:Node, outside:bool, vcid):
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  vcid = 'H' if outside else ''
 
   if(idsrc < iddest):
-    idsrc += 1
+    idsrc += 1; vcid += '0'
   else:
-    idsrc -= 1; vcid += 1
+    idsrc -= 1; vcid += '1'
 
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
@@ -802,32 +824,51 @@ def route_chain(src:Node, dest:Node, outside:bool):
   
   return nextid, str(vcid)
 
-def route_ring(src:Node, dest:Node, outside:bool):
+def route_ring(src:Node, dest:Node, outside:bool, vcid):
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  vcset = False
+  if(len(vcid) > 0):
+    vcset = (vcid[-1] == '1')
+    if(vcset):
+      # do not absorb outer vcid when going into an inner topology from outside
+      if((not outside) and vcid[0] == 'H'):
+        vcset = False
+      # do not absorb inner vcid when going outside the inner topology
+      if((outside) and vcid[0] != 'H'):
+        vcset = False
+  
+  if(not vcset):
+    vcid = 'H' if outside else ''
 
   n = srcTopo.topoParams
 
   if(idsrc < iddest):
     if(iddest - idsrc > (idsrc + n - iddest)):
-      idsrc -= 1; vcid += 1
+      idsrc -= 1;
     else:
-      idsrc += 1
+      idsrc += 1;
   else:
     if(idsrc - iddest > (iddest + n - idsrc)):
-      idsrc += 1
+      idsrc += 1;
     else:
-      idsrc -= 1; vcid += 1
-  
+      idsrc -= 1;
+
   if(idsrc < 0):
     idsrc = n - 1
   elif(idsrc == n):
     idsrc = 0
+
+  # guaranteed >= 0, hence 0 or 1
+  if(not vcset):
+    if(idsrc <= 1):
+      vcid += '1'
+    else:
+      vcid += '0'
 
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
@@ -838,7 +879,7 @@ def route_ring(src:Node, dest:Node, outside:bool):
   
   return nextid, str(vcid)
 
-def route_butterfly(src:Node, dest:Node, outside:bool):
+def route_butterfly(src:Node, dest:Node, outside:bool, vcid):
 
   #This function also prints the switches intermediate directly
   
@@ -915,7 +956,7 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
             
   return nextid, str(vcid)
 
-def route_hypercube(src:Node, dest:Node, outside:bool):
+def route_hypercube(src:Node, dest:Node, outside:bool, vcid):
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
 
@@ -942,39 +983,39 @@ def route_hypercube(src:Node, dest:Node, outside:bool):
   
   return nextid, str(vcid)
 
-def route_backend(src:Node, dest:Node, outer:bool):
+def route_backend(src:Node, dest:Node, outer:bool, vcid):
   routingClass = src.inClass
   if(outer):
     routingClass = outerTopology.topoClass
   
   if(routingClass == 'C'):
-    return route_chain(src, dest, outer)
+    return route_chain(src, dest, outer, vcid)
   elif(routingClass == 'R'):
-    return route_ring(src, dest, outer)
+    return route_ring(src, dest, outer, vcid)
   elif(routingClass == 'B'):
-    return route_butterfly(src, dest, outer)
+    return route_butterfly(src, dest, outer, vcid)
   elif(routingClass == 'F'):
-    return route_folded_torus(src, dest, outer)
+    return route_folded_torus(src, dest, outer, vcid)
   elif(routingClass == 'H'):
-    return route_hypercube(src, dest, outer)
+    return route_hypercube(src, dest, outer, vcid)
   elif(routingClass == 'M'):
-    return route_mesh(src, dest, outer)
+    return route_mesh(src, dest, outer, vcid)
 
   print("routing class not found")
   exit()
 
-def route_inside(src:Node, dest:Node):
-  return route_backend(src, dest, False)
+def route_inside(src:Node, dest:Node, vcid):
+  return route_backend(src, dest, False, vcid)
 
-def route_outside(src:Node, dest:Node):
-  return route_backend(src, dest, True)
+def route_outside(src:Node, dest:Node, vcid):
+  return route_backend(src, dest, True, vcid)
 
 #Replace destination with the tile's head node
-def route_outwards(src:Node, dest:Node):
+def route_outwards(src:Node, dest:Node, vcid):
   dest = innerTopologies[src.headID].topoGraph.nodes[innerTopologies[src.headID].headID]['exdata']
-  return route_backend(src, dest, False)
+  return route_backend(src, dest, False, vcid)
 
-def route(idsrc, iddest):
+def route(idsrc, iddest, vcid):
   nodesrc = getNode(idsrc)['exdata']
   nodedest = getNode(iddest)['exdata']
   tilesrc = nodesrc.headID
@@ -983,19 +1024,20 @@ def route(idsrc, iddest):
   #This case: since we're passed unequal src, dest with same head,
   #           route them within a tile
   if(tilesrc == tiledest):
-    return route_inside(nodesrc, nodedest)
+    return route_inside(nodesrc, nodedest, vcid)
 
   #If src is a Head, and heads of tiles differ, route src outside
   if(nodesrc.isHead):
-    return route_outside(nodesrc, nodedest)
+    return route_outside(nodesrc, nodedest, vcid)
   
   #If src is not a Head, route it to the head of its tile
-  return route_outwards(nodesrc, nodedest)
+  return route_outwards(nodesrc, nodedest, vcid)
 
 
 def simulateOnce():
   print("Enter source ID (or EXIT to stop): ", end='')
   sourceID = input()
+  vcID = ''
   if(sourceID == "EXIT"):
     print("\nQuitting...")
     exit()
@@ -1005,7 +1047,7 @@ def simulateOnce():
   print("\nRouting...\n")
 
   while(sourceID != destID):
-    nextID, vcID = route(sourceID, destID)
+    nextID, vcID = route(sourceID, destID, vcID)
     print("Node: " + nextID + ", VC: " + vcID)
     sourceID = nextID
 
