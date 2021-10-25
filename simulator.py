@@ -20,7 +20,7 @@
 ### ----------------------------------------------------------------
 ### OUTPUT:
 ### Network.Outer.dot - a DOT format file containing graphical representation of outer topology
-### Network.<InnerID>.dot - a DOT format file for each inner topology's graph
+### Network.<headID>.dot - a DOT format file for each inner topology's graph
 ###
 ### The simulator will output the routing in the format:
 ### Node <(Switch)>?: <NodeID>, VC: <VCID>
@@ -1272,7 +1272,7 @@ def simulateOnce():
     # Route once
     nextID, vcID = route(sourceID, destID, vcID)
     # Print received ID, VCID
-    print("Node: " + nextID + ", VC: " + vcID)
+    print("Node : " + nextID + ", VC : " + vcID)
     # Prepare for next tick
     sourceID = nextID
 
@@ -1286,7 +1286,7 @@ def simulateOnce():
 ####  BEGIN SIMULATION  ####
 ############################
 
-INTRO = "Please refer to the generated DOT files (Network.<innerID>.dot) to find favorable node IDs.\n"
+INTRO = "Please refer to the generated DOT files (Network.<headID>.dot) to find favorable node IDs.\n"
 OUTRO = "\nQuitting..."
 
 print(INTRO)
