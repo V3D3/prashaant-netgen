@@ -840,7 +840,7 @@ def route_ring(src:Node, dest:Node, outside:bool):
 
 def route_butterfly(src:Node, dest:Node, outside:bool):
 
-  #This function also prints the switches intermediate directly
+  #This function also prints the intermediate switches directly
   
   idsrc = int(src.headID if outside else src.inID)
   iddest = int(dest.headID if outside else dest.inID)
@@ -848,7 +848,10 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  if (outside):  
+    vcid = 4*int(src.isHead)
+  else :
+    vcid = iddest
 
   n = srcTopo.topoParams
 
@@ -859,6 +862,11 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
 
   if (idsrc < iddest):    # Left to right routing. Assuming there are no illegal routings due to invalid inputs  
 
+    if (outside):  
+        vcid = 4*int(src.isHead)
+    else :
+        vcid = iddest - n/2       
+        
     current_switch = int(idsrc/2)
     final_switch = int((int(iddest) - n/2 )/2)       
 
@@ -884,6 +892,11 @@ def route_butterfly(src:Node, dest:Node, outside:bool):
 
   else :   #Routing from right to left
 
+    if (outside):  
+        vcid = 4*int(src.isHead)
+    else :
+        vcid = iddest           
+    
     current_switch = int((idsrc - n/2 )/2)
     final_switch = int(iddest/2)
 
@@ -922,16 +935,19 @@ def route_hypercube(src:Node, dest:Node, outside:bool):
   srcTopo = outerTopology if outside else (innerTopologies[src.headID])
 
   nextid = ''
-  vcid = 4*int(src.isHead)
+  #vcid = 4*int(src.isHead)
+  
+  if (outside):
+    vcid = 4
+  else :
+    vcid = iddest
   
   if((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b100
   elif((idsrc & 0b100) != (iddest & 0b100)):
     idsrc ^= 0b010
-    vcid += 1
   else:
     idsrc ^= 0b001
-    vcid += 2
 
   if(outside):
     nextid = innerTopologies[str(idsrc)].headID
