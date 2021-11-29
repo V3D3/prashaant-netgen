@@ -68,6 +68,7 @@ interface Ifc_channel;
 	interface Get#(Flit) load_flit;
 	// Output channel - sends flits from the arbiter
 	interface Put#(Flit) send_flit; 
+endinterface
 
 endpackage
 
