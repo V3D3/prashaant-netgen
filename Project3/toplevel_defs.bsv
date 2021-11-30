@@ -43,7 +43,7 @@ endinterface
 
 
 // Module for generating flits at bottom level nodes
-module flit_gen (Ifc_flit_gen);
+module mkFlitGen (Ifc_flit_gen);
 
 	<<<< insert flit generation code >>>>>
 
