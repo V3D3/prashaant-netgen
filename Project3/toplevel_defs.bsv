@@ -6,7 +6,7 @@ import ClientServer ::*;
 
 
 // Defining structure for Node address
-typedef struct { 
+typedef struct { a
 
 	// Position of the tile in the L1 layer
 	int Network_num;	
@@ -25,6 +25,8 @@ typedef struct {
 	Node_addr fin_dest;
 	// Local or current Destination address
 	Node_addr cur_dest;	
+	// Virtual Channel number
+	Bit#(8)     vc;              // 8 is chosen for now
 	// Payload
 	Bit#(`payload_size) payload;
 	
@@ -36,7 +38,8 @@ typedef struct {
 interface Ifc_flit_gen;
 	
 	// method that returns a flit -- check who will set the enable for this
-	method Flit flit_gen;
+	method Flit gen_flit;
+	method Action consume_flit(Flit f);
 
 endinterface
 
@@ -65,10 +68,9 @@ interface Ifc_channel;
 	
 	// Each channel is fully duplex, and each input link has a router and output link has an arbiter
 	// Input channel - to be connected to router
-	interface Get#(Flit) load_flit;
+	interface Put#(Flit) load_flit;
 	// Output channel - sends flits from the arbiter
-	interface Put#(Flit) send_flit; 
-endinterface
+	interface Get#(Flit) send_flit; 
 
 endpackage
 
