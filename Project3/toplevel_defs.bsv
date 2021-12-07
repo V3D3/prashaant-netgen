@@ -6,12 +6,12 @@ import ClientServer ::*;
 
 
 // Defining structure for Node address
-typedef struct { a
+typedef struct { 
 
 	// Position of the tile in the L1 layer
-	int Network_num;	
+	int L1_headID;	
 	// Node postion within the Tile
-	int row_num;
+	int L2_ID;
 	
 	} Node_addr;  
 
@@ -23,10 +23,6 @@ typedef struct {
 	Node_addr src;
 	// Final Destination address
 	Node_addr fin_dest;
-	// Local or current Destination address
-	Node_addr cur_dest;	
-	// Virtual Channel number
-	Bit#(8)     vc;              // 8 is chosen for now
 	// Payload
 	Bit#(`payload_size) payload;
 	
@@ -35,7 +31,7 @@ typedef struct {
 
 
 // Interface for the flit generator
-interface Ifc_flit_gen;
+interface Ifc_core;
 	
 	// method that returns a flit -- check who will set the enable for this
 	method Flit gen_flit;
@@ -44,13 +40,15 @@ interface Ifc_flit_gen;
 endinterface
 
 
-
-// Module for generating flits at bottom level nodes
-module mkFlitGen (Ifc_flit_gen);
+/* This part is to be done by the end user - simulator in our case
+// Module for generating and core flits at bottom level nodes
+module mkCore (Ifc_core);
 
 	<<<< insert flit generation code >>>>>
 
 endmodule
+
+*/
 
 // Interfaces for the nodes
 interface Ifc_node#(n_links);   // Since the links are fully duplex, number of input links and output links would be the same
