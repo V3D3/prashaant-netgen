@@ -59,7 +59,7 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 	channel[0] = interface Ifc_channel;
 			interface send_flit = toGet(buff_vc[round_robin_1 -1]);
 
-			interface load_flit = interface Put#(Flit);
+			interface load_flit = interface Put#(Flit);   // check how to add int for VC (previous node should pass this) 
 							method Action put(Flit f);
 								if (f.fin_dest ! = self_addr)
 									if (f.vc == 1)
@@ -73,7 +73,7 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 							endmethod
 					     endinterface;
 
-	channel[1] = interface Ifc_channel;
+	channel[1] = interface Ifc_chatoGet(buff_vc[round_robin_1 -1]);nnel;
 			interface send_flit = toGet(buff_vc[round_robin_2 - 1]);
 
 			interface load_flit = interface Put#(Flit);
