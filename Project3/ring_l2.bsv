@@ -37,7 +37,9 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 		if (round_robin_1 == 1) round_robin_1 <= 2;
 		else if (round_robin_1 == 2) round_robin_1 <= 5;
 		else if (round_robin_1 == 5) round_robin_1 <= 6;
-		else if (round_robin_1 == 6) round_robin_1 <= 1;
+		else if (round_robin_1 == 6) round_robin_1 <= 9;
+		else if (round_robin_1 == 9) round_robin_1 <= 10;
+		else if (round_robin_1 == 10) round_robin_1 <= 1;
 	endrule
 
 	rule round_robin_count_2;
@@ -47,7 +49,9 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 		if (round_robin_2 == 3) round_robin_2 <= 4;
 		else if (round_robin_2 == 4) round_robin_2 <= 7;
 		else if (round_robin_2 == 7) round_robin_2 <= 8;
-		else if (round_robin_2 == 8) round_robin_2 <= 3;
+		else if (round_robin_1 == 8) round_robin_1 <= 11;
+		else if (round_robin_1 == 11) round_robin_1 <= 12;
+		else if (round_robin_2 == 12) round_robin_2 <= 3;
 	endrule
 
 
