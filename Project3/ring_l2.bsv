@@ -16,7 +16,7 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 
 
 	// Instantiate the flit generation module
-	Ifc_flit_gen generator <- mkFlitGen;
+	Ifc_core <- mkCore;
 
 	// Instantiating VCs * n_links number of FIFOs, which would act as the buffers.
 	// The routers would store flits into the corresponding buffers, and the arbiter picks and transmits flits from its set of buffers in a round-robin fashion
