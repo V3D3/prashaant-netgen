@@ -68,25 +68,10 @@ endinterface
 
 interface Ifc_channel;
 	
-	// Each channel is fully duplex, and each input link has a router and output link has an arbiter
-	// Input channel - to be connected to router
+	interface Put#(Flit) load_flit;
 	interface input_link il;
 	// Output channel - sends flits from the arbiter
-	interface output_link ol; 
-
+	interface Get#(Flit) send_flit; 
+	
 endpackage
 
-interface input_link;
-	// Put interface for the flit
-	interface Put#(Flit) load_flit;
-	// Virtual Channel Action method
-	method    Action     virtual_channel (int vc);
-	
-endinterface
-
-interface output_link;
-	// Get interface for the flit
-	interface Get#(Flit) get_flit;
-	// Virtual Channel Value method
-	method   int        virtual_channel;
-endinterface
