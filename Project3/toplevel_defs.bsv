@@ -28,6 +28,8 @@ typedef struct {
 	// Payload
 	Bit#(`payload_size) payload;
 	
+	int vc;
+	
 	} Flit;
 
 
