@@ -40,15 +40,19 @@ interface Ifc_core;
 endinterface
 
 
-/* This part is to be done by the end user - simulator in our case
+This part is to be done by the end user - simulator in our case
 // Module for generating and core flits at bottom level nodes
-module mkCore (Ifc_core);
+module mkCore #(num_(Ifc_core);
 
+	// LFSR for random patterns 
+	LFSR#( Bit#(8) ) lfsr <- mkLFSR_8 rand ;	
+
+	
 	<<<< insert flit generation code >>>>>
 
 endmodule
 
-*/
+
 
 // Interfaces for the nodes
 interface Ifc_node#(n_links);   // Since the links are fully duplex, number of input links and output links would be the same
@@ -66,9 +70,23 @@ interface Ifc_channel;
 	
 	// Each channel is fully duplex, and each input link has a router and output link has an arbiter
 	// Input channel - to be connected to router
-	interface Put#(Flit) load_flit;
+	interface input_link il;
 	// Output channel - sends flits from the arbiter
-	interface Get#(Flit) send_flit; 
+	interface output_link ol; 
 
 endpackage
 
+interface input_link;
+	// Put interface for the flit
+	interface Put#(Flit) load_flit;
+	// Virtual Channel Action method
+	method    Action     virtual_channel (int vc);
+	
+endinterface
+
+interface output_link;
+	// Get interface for the flit
+	interface Get#(Flit) get_flit;
+	// Virtual Channel Value method
+	method   int        virtual_channel;
+endinterface
