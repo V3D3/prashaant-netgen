@@ -11,15 +11,16 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 	 Date line algorithm is to be implemented.
 	 A L2 ring node will have 2 VCs per output link, and n_links would be 2 by default
 	 Hence there would be 4 VCs in total. VC1, VC2 correspond to link1, while VC3 and VC4 correspond to link2 
-	 Each input link would have buffers corresponding to these 4 VCs. Additionally, the flit generation module would have a buffer for 2 VCs, since a generated flit can only be inserted in the lower VC
+	 Each input link would have buffers corresponding to these 4 VCs. Additionally, the flit generation module would have a buffer for 4 VCs (for uniformity, though a generated flit can only be inserted in the lower VC)
 	*/
 
 
 	// Instantiate the flit generation module
-	Ifc_core <- mkCore;
+	Ifc_core core <- mkCore;
 
-	// Instantiating VCs * n_links number of FIFOs, which would act as the buffers.
+	// Instantiating VCs * (n_links + 1 ) number of FIFOs, which would act as the buffers.
 	// The routers would store flits into the corresponding buffers, and the arbiter picks and transmits flits from its set of buffers in a round-robin fashion
+	
 	
 
 	Vector#((n_links + 1)*4, FIFO#(Flit)) buff_vc <- replicateM(mkFIFO());
@@ -28,6 +29,13 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 	Reg#(int) round_robin_1 <- mkReg(1);
 	Reg#(int) round_robin_2 <- mkReg(3);
 
+	// Rule to get the flits from the Core
+	
+	rule get_core_flit;
+	
+		if core.gen_Flit                                 /// this rule to be handled
+	
+	endrule
 
 	// Rules to update the Round Robin counter
 	rule round_robin_count_1;
@@ -69,15 +77,16 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 									if (f.vc == 1)
 									 	buff_vc[3].enqueue(f);
 									else if (self_addr.row_num == 1)
-										buff_vc[3].enqueue(f);       ////// ********** UPDATE ITS VC also !!!!!!
+										f.vc = 1;
+										buff_vc[3].enqueue(f); 
 									else
 										buff_vc[2].enqueue(f);
 								else
-									generator.consume_flit(f);
+									core.consume_flit(f);
 							endmethod
 					     endinterface;
 
-	channel[1] = interface Ifc_chatoGet(buff_vc[round_robin_1 -1]);nnel;
+	channel[1] = interface Ifc_channel;
 			interface send_flit = toGet(buff_vc[round_robin_2 - 1]);
 
 			interface load_flit = interface Put#(Flit);
@@ -86,11 +95,12 @@ module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
 									if (f.vc == 1)
 									 	buff_vc[1].enqueue(f);
 									else if (self_addr.row_num == 2)
-										buff_vc[1].enqueue(f);       ////// ********** UPDATE ITS VC also !!!!!!
+										f.vc = 1;
+										buff_vc[1].enqueue(f);       
 									else
 										buff_vc[0].enqueue(f);
 								else
-									generator.consume_flit(f);
+									core.consume_flit(f);
 							endmethod
 					     endinterface;
 
