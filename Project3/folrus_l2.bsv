@@ -45,7 +45,7 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
     // bits to indicate VC serviced by arbiter (roundrobin fashion)
     Reg#(Bit#(n_links)) arbiter_rr_counters <- mkReg(0);
     rule rr_out_incr;
-        arbiter_rr_counter <= ~arbiter_rr_counters;
+        arbiter_rr_counters <= ~arbiter_rr_counters;
     endrule
 
     $$2
@@ -60,7 +60,7 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
             interface send_flit = interface Get#(Flit);
                 method ActionValue get();
                     int idx = n_links + i;
-                    if (arbiter_rr_counter[i] == 1)
+                    if (arbiter_rr_counters[i] == 1)
                         idx = idx + n_links;
                     
                     buffers[idx].deq();
@@ -118,7 +118,7 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
                                         idx = idx + n_links;
                                         f.vc = 1;
                                     end
-                                buffers[linkYPos].enq(f);
+                                buffers[idx].enq(f);
                             end
                         $$3
                     end

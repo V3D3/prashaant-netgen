@@ -14,17 +14,17 @@ $$$
             router_rr_counter_head <= router_rr_counter_head + 1;
     endrule
 // next, we satisfy the channel interface for head's node_channels
-    for(int i = n_links; i < n_links + %n_links%; i++)
+    for(int i = 0; i < %n_links%; i++)
     begin
-        node_channels[i] = interface Ifc_channel;
+        node_channels[i + n_links] = interface Ifc_channel;
             interface send_flit = toGet(headbuffers[%n_links% + i]);
             interface load_flit = toPut(headbuffers[i]);
         endinterface
     end
 // finally we add rules for head's input to output links, with additionally enqueing to node's own buffers if needed
     rule il_to_router_rr_head;
-        Flit f = buffers[router_rr_counter_head].first();
-        buffers[router_rr_counter_head].deq();
+        Flit f = headbuffers[router_rr_counter_head].first();
+        headbuffers[router_rr_counter_head].deq();
 
         if(f.valid == 1)
         begin

@@ -73,39 +73,39 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
         
         // is the flit useful?
         if(f.valid == 1)
+        begin
+            // route it to an output buffer, if not mine
+            if (f.fin_dest != self_addr)
             begin
-                // route it to an output buffer, if not mine
-                if (f.fin_dest != self_addr)
-                    begin
-                        int destIdx = 0;
-                        if(self_addr.L1_headID == f.fin_dest.L1_headID)
-                            // destination is in same tile
-                            // route to dest
-                            destIdx = f.fin_dest.L2_ID;
-                        else
-                            // destination is in different tile
-                            // route to my tile's head
-                            destIdx = headIdx;
-                        
-                        int diffRow = (destIdx / rows) - myRow;
-                        int diffCol = (destIdx % rows) - myCol;
-
-                        if(diffRow != 0)
-                            if(diffRow > 0)
-                                buffers[linkXPos].enq(f);
-                            else
-                                buffers[linkXNeg].enq(f);
-                        else if (diffCol != 0)
-                            if(diffCol > 0)
-                                buffers[linkYPos].enq(f);
-                            else
-                                buffers[linkYNeg].enq(f);
-                        $$3
-                    end
+                int destIdx = 0;
+                if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                    // destination is in same tile
+                    // route to dest
+                    destIdx = f.fin_dest.L2_ID;
                 else
-                    // its mine, route it to the core
-                    buffers[coreIn].enq(f);
+                    // destination is in different tile
+                    // route to my tile's head
+                    destIdx = headIdx;
+                
+                int diffRow = (destIdx / rows) - myRow;
+                int diffCol = (destIdx % rows) - myCol;
+
+                if(diffRow != 0)
+                    if(diffRow > 0)
+                        buffers[linkXPos].enq(f);
+                    else
+                        buffers[linkXNeg].enq(f);
+                else if (diffCol != 0)
+                    if(diffCol > 0)
+                        buffers[linkYPos].enq(f);
+                    else
+                        buffers[linkYNeg].enq(f);
+                $$3
             end
+            else
+                // its mine, route it to the core
+                buffers[coreIn].enq(f);
+        end
     endrule
 
 

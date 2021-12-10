@@ -83,10 +83,10 @@ module chain_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int len, int l
                         
                         int diff = destIdx - self_addr.L2_ID;
 
-                        if(diffRow > 0)
-                            buffers[linkXPos].enq(f);
-                        else if(diffRow < 0)
-                            buffers[linkXNeg].enq(f);
+                        if(diff > 0)
+                            buffers[linkPos].enq(f);
+                        else if(diff < 0)
+                            buffers[linkNeg].enq(f);
                         $$3
                     end
                 else

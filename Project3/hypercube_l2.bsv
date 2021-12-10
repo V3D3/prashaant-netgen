@@ -65,7 +65,7 @@ module hypercube_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int linkDi
             // send flit from me to others
             interface send_flit = interface Get#(Flit);
                 method ActionValue get();
-                    int idx = n_links + i + (arbiter_rr_counter[i] * n_links);
+                    int idx = n_links + i + (arbiter_rr_counters[i] * n_links);
                     
                     buffers[idx].deq();
                     return buffers[idx].first();
