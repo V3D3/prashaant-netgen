@@ -1,7 +1,4 @@
     Vector#(%n_headbuffers%, FIFO#(Flit)) headbuffers <- replicateM(mkFIFO);
-
-    int myRowL1 = self_addr.L1_headID / %rows%;
-    int myColL1 = self_addr.L1_headID % %rows%;
 $$$
 true
 $$$
@@ -14,9 +11,10 @@ $$$
             router_rr_counter_head <= router_rr_counter_head + 1;
     endrule
 
-    Reg#(Bit#(%n_links%)) arbiter_rr_counters_head <- mkReg(0);
+    Vector#(%n_links%, Reg#(Bit#(3))) arbiter_rr_counters_head <- replicateM(mkReg(0));
     rule rr_out_incr_head;
-        arbiter_rr_counters_head <= ~arbiter_rr_counters_head;
+        for (int i = 0; i < %n_links%; i++)
+            arbiter_rr_counters_head[i]++;
     endrule
 // next, we satisfy the channel interface for head's node_channels
     for(int i = 0; i < %n_links%; i++)
@@ -24,9 +22,7 @@ $$$
         node_channels[i + n_links] = interface Ifc_channel;
             interface send_flit = interface Get#(Flit);
                 method ActionValue get();
-                    int idx = %n_links% + i;
-                    if (arbiter_rr_counters_head[i] == 1)
-                        idx = idx + %n_links%;
+                    int idx = %n_links% + i + arbiter_rr_counters_head[i] * %n_links%;
                     
                     headbuffers[idx].deq();
                     return headbuffers[idx].first();
@@ -47,26 +43,18 @@ $$$
             begin
                 int destIdx = f.fin_dest.L1_headID;
 
-                int diffRow = (destIdx / %rows%) - myRowL1;
-                int diffCol = (destIdx % %rows%) - myColL1;
+                int diff = destIdx ^ self_addr.L1_headID;
+                int offset = destIdx * %n_links%;
 
-                if(diffRow != 0)
-                    if(diffRow > 0)
-                        headbuffers[%linkXPos%].enq(f);
-                    else
-                        headbuffers[%linkXNeg%].enq(f);
-                else
-                begin
-                    int idx = linkYPos;
-                    
-                    if ((f.vc == 1) || (myColL1 == 1))
-                    begin
-                        idx = idx + %n_links%;
-                        f.vc = 1;
-                    end
+                if (diff != 0)
+                    f.vc = destIdx;
 
-                    buffers[idx].enq(f);
-                end
+                if (diff >= 4)
+                    headbuffers[%linkDiff2% + offset].enq(f);
+                else if (diff >= 2)
+                    headbuffers[%linkDiff1% + offset].enq(f);
+                else if (diff >= 1)
+                    headbuffers[%linkDiff0% + offset].enq(f);
             end
             else
                 // use coreOut as a universal means of transferring from L1 to L2 routing
@@ -82,17 +70,15 @@ $$$
                             begin
                                 int headDestIdx = f.fin_dest.L1_headID;
 
-                                int hdiffRow = (headDestIdx / %rows%) - myRowL1;
-                                int hdiffCol = (headDestIdx % %rows%) - myColL1;
+                                int hdiff = headDestIdx ^ self_addr.L1_headID;
+                                int hoffset = headDestIdx * %n_links%;
+                                
+                                f.vc = headDestIdx;
 
-                                if (hdiffRow != 0)
-                                    if (hdiffRow > 0)
-                                        headbuffers[%linkXPos%].enq(f);
-                                    else
-                                        headbuffers[%linkXNeg%].enq(f);
-                                else
-                                begin
-                                    f.vc = 0;
-                                    headbuffers[%linkYPos%].enq(f);
-                                end
+                                if (hdiff >= 4)
+                                    headbuffers[%linkDiff2% + hoffset].enq(f);
+                                else if (hdiff >= 2)
+                                    headbuffers[%linkDiff1% + hoffset].enq(f);
+                                else if (hdiff >= 1)
+                                    headbuffers[%linkDiff0% + hoffset].enq(f);
                             end
