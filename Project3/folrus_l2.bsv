@@ -1,32 +1,32 @@
-package mesh_l2;
+package folrus_l2;
 
 import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg) (Ifc_node#(n_links));
-    // Only one virtual channel per link, routing is X-Y
-    // n_links: 2 (corner) / 3 (edge) / 4 (internal)
-    // VC[i] - Link[i]
+module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg) (Ifc_node#(n_links));
+    // Two virtual channels per link, routing is X (for locating ring, shortest arc), then Date-line in Y
+    // n_links: 4 (all)
     // Core will have access to one input and one output buffer
 
     // buffers for:
-    //        links   core  in  out
-    Vector#((n_links + 1) * (1 + 1), FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    //        links   core  in  out   out VC1s
+    Vector#((n_links + 1) * (1 + 1) + n_links, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     $$0
     // up to n_links - 1: ILi
-    // n_links to 2n_links - 1: OLi
-    // 2n_links: IC
-    // 2n_links + 1: OC
+    // n_links to 2n_links - 1: OLi VC0
+    // 2n_links to 3n_links - 1: OLi VC1
+    // 3n_links: IC
+    // 3n_links + 1: OC
 
     // index of buffers to core
-    int coreIn = 2 * n_links;
-    int coreOut = 2 * n_links + 1;
+    int coreIn = 3 * n_links;
+    int coreOut = 3 * n_links + 1;
 
     // the coords of head node in my topology
-    int headIdx = (rows / 2) * rows + (col / 2);
+    int headIdx = 0;
 
-    // my coords in the mesh
+    // my coords in the FT
     int myRow = self_addr.L2_ID / rows;
     int myCol = self_addr.L2_ID % rows;
 
@@ -42,6 +42,12 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
             router_rr_counter <= router_rr_counter + 1;
     endrule
 
+    // bits to indicate VC serviced by arbiter (roundrobin fashion)
+    Reg#(Bit#(n_links)) arbiter_rr_counters <- mkReg(0);
+    rule rr_out_incr;
+        arbiter_rr_counter <= ~arbiter_rr_counters;
+    endrule
+
     $$2
 
     ////////// Link Rules
@@ -51,7 +57,16 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
         // attach to input and output channels
         node_channels[i] = interface Ifc_channel;
             // send flit from me to others
-            interface send_flit = toGet(buffers[n_links + i]);
+            interface send_flit = interface Get#(Flit);
+                method ActionValue get();
+                    int idx = n_links + i;
+                    if (arbiter_rr_counter[i] == 1)
+                        idx = idx + n_links;
+                    
+                    buffers[idx].deq();
+                    return buffers[idx].first();
+                endmethod
+            endinterface
             // receive a flit from somewhere
             interface load_flit = toPut(buffers[i]);
         endinterface: Ifc_channel
@@ -61,14 +76,14 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
     // BI/ILx to OLx/BO buffers
     rule il_to_router_rr;
         // for each ILi / router in
-
+        Flit f;
         // use IL by default
         int idx = router_rr_counter;
         if (router_rr_counter == n_links)
             // use CoreOut
             idx = coreOut;
-
-        Flit f = buffers[idx].first();
+        
+        f = buffers[idx].first();
         buffers[idx].deq();
         
         // is the flit useful?
@@ -96,10 +111,15 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
                             else
                                 buffers[linkXNeg].enq(f);
                         else if (diffCol != 0)
-                            if(diffCol > 0)
+                            begin
+                                int idx = linkYPos;
+                                if ((f.vc == 1) || (myCol == 1))
+                                    begin
+                                        idx = idx + n_links;
+                                        f.vc = 1;
+                                    end
                                 buffers[linkYPos].enq(f);
-                            else
-                                buffers[linkYNeg].enq(f);
+                            end
                         $$3
                     end
                 else
@@ -108,20 +128,8 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
             end
     endrule
 
-
-    //////////// We'll let the core decide when it wants to consume from coreIn and let it manage coreIn
-    // rule core_consume;
-    //     Flit f = buffers[coreIn].first();
-    //     buffers[coreIn].deq();
-
-    //     if(f.valid == 1)
-    //         begin
-    //             core.consume_flit(f);
-    //         end
-    // endrule
-
-endmodule: mesh_l2;
-endpackage: mesh_l2;
+endmodule: folrus_l2;
+endpackage: folrus_l2;
 
 
 ////////
