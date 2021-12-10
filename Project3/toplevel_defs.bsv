@@ -19,6 +19,8 @@ typedef struct {
 // Defining a structure for the flit
 typedef struct { 
 
+	// Is this flit valid?
+	Bit valid;
 	// Source address
 	Node_addr src;
 	// Final Destination address
