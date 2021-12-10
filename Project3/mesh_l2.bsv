@@ -50,7 +50,85 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
             // send flit from me to others
             interface send_flit = toGet(buffers[n_links + i]);
             // receive a flit from somewhere
-            interface load_flit = interface Put#(Flit);
+            interface load_flit = toPut(buffers[i]);
+        endinterface: Ifc_channel
+    end
+
+    ////////// Router rules
+    // BI/ILx to OLx/BO buffers
+    rule il_to_router_rr;
+        // for each ILi / router in
+        Flit f;
+        if (router_rr_counter == n_links)
+            // use BO
+            begin
+                f = buffers[coreOut].first();
+                buffers[coreOut].deq();
+            end
+        else
+            // use IL
+            begin
+                // get the flit from input
+                f = buffers[router_rr_counter].first();
+                buffers[router_rr_counter].deq();
+            end
+        
+        // is the flit useful?
+        if(f.valid == 1)
+            begin
+                // route it to an output buffer, if not mine
+                if (f.fin_dest != self_addr)
+                    begin
+                        int destIdx = 0;
+                        if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                            // destination is in same tile
+                            // route to dest
+                            destIdx = f.fin_dest.L2_ID;
+                        else
+                            // destination is in different tile
+                            // route to my tile's head
+                            destIdx = headIdx;
+                        
+                        int diffRow = (destIdx / rows) - myRow;
+                        int diffCol = (destIdx % rows) - myCol;
+
+                        if(diffRow != 0)
+                            if(diffRow > 0)
+                                buffers[linkXPos].enq(f);
+                            else
+                                buffers[linkXNeg].enq(f);
+                        else
+                            if(diffCol > 0)
+                                buffers[linkYPos].enq(f);
+                            else
+                                buffers[linkYNeg].enq(f);
+                    end
+                else
+                    // its mine, route it to the core
+                    buffers[coreIn].enq(f);
+            end
+    endrule
+
+
+    //////////// We'll let the core decide when it wants to consume from coreIn and let it manage coreIn
+    // rule core_consume;
+    //     Flit f = buffers[coreIn].first();
+    //     buffers[coreIn].deq();
+
+    //     if(f.valid == 1)
+    //         begin
+    //             core.consume_flit(f);
+    //         end
+    // endrule
+
+endmodule: mesh_l2;
+endpackage: mesh_l2;
+
+
+////////
+/*
+// for core out / router in
+        interface Put#(Flit);
                 method Action put(Flit f);
                     if (f.fin_dest != self_addr)
                         begin
@@ -81,21 +159,4 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
                     else
                         buffers[coreIn].enq(f);
                 endmethod
-            endinterface: load_flit
-        endinterface: Ifc_channel
-    end
-
-    ////////// Router, Arbiter rules
-    // BI/ILx to OLx/BO buffers
-    rule il_to_router_rr;
-        // for core out / router in
-        
-        // for each ILi / router in
-        for(int i = 0; i < n_links; i++)
-            begin
-            end
-        
-    endrule
-
-endmodule: mesh_l2;
-endpackage: mesh_l2;
+*/
