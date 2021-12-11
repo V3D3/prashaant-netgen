@@ -102,7 +102,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
             endinterface: Ifc_channel
         end
     end
-
+//
 endmodule
 
 endpackage
