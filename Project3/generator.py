@@ -201,8 +201,8 @@ def ring_gen(n, id):
       thisGraph.add_edge(myID, nextID, src=1, dest=2)
 
     # Adding links to head
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)), src=2, dest=1)
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)), src=1, dest=2)
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)), src=1, dest=2)
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)), src=2, dest=1)
 
   # Add this topology to inner topologies dict
   innerTopologies[id] = thisTopology
@@ -831,6 +831,7 @@ def mkEdge(G, edge):
 G = outerTopology.topoGraph
 tc = outerTopology.topoClass
 
+OUT += "\n\n // [1/3] Adding instantiation of L1 (Head Router) Nodes \n\n"
 print('[1/3] Adding instantiation of L1 (Head Router) Nodes')
 
 # Preprocessing: cacheing the current number of edges
@@ -934,6 +935,7 @@ print("[3/3] Adding instantiation of cores and linking to nodes")
 # Instantiate cores and add edges from nodes to cores and routers
 for head in innerTopologies:
     G = innerTopologies[head].topoGraph
+    OUT += f'\n\n // L2 Generation : Class: {innerTopologies[head].topoClass}, HeadID: {head}\n\n'
 
     for node in G.nodes:
         OUT += f'        Ifc_core c{node} <- mkCore;\n'
