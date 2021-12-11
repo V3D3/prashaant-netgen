@@ -4,24 +4,17 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg) (Ifc_node#(n_links));
+module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg) (Ifc_node#(n_links));
     // Only one virtual channel per link, routing is X-Y
     // n_links: 2 (corner) / 3 (edge) / 4 (internal)
     // VC[i] - Link[i]
     // Core will have access to one input and one output buffer
 
     // buffers for:
-    //        links   core  in  out
-    Vector#((n_links + 1) * (1 + 1), FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    // (core is treated as an IL/OL, it is at 0)
+    //         each IL       for each OL
+    Vector#((n_links + 1) * (n_links + 1), FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     $$0
-    // up to n_links - 1: ILi
-    // n_links to 2n_links - 1: OLi
-    // 2n_links: IC
-    // 2n_links + 1: OC
-
-    // index of buffers to core
-    int coreIn = 2 * n_links;
-    int coreOut = 2 * n_links + 1;
 
     // the coords of head node in my topology
     int headIdx = (rows / 2) * rows + (col / 2);
@@ -34,12 +27,12 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
     bool isHead = $$1;
 
     // round robin and its incrementer, for router
-    Reg#(int) router_rr_counter <- mkReg(0);
-    rule rr_in_incr;
-        if (router_rr_counter == n_links + 1)
-            router_rr_counter <= 0
+    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    rule rr_arbiter_incr;
+        if (arbiter_rr_counter < n_links)
+            arbiter_rr_counter <= arbiter_rr_counter + 1
         else
-            router_rr_counter <= router_rr_counter + 1;
+            arbiter_rr_counter <= 0;
     endrule
 
     $$2
@@ -51,85 +44,15 @@ module mesh_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int c
         // attach to input and output channels
         node_channels[i] = interface Ifc_channel;
             // send flit from me to others
-            interface send_flit = toGet(buffers[n_links + i]);
+            interface send_flit = toGet(buffers[n_links * arbiter_rr_counter + i]);
             // receive a flit from somewhere
-            interface load_flit = toPut(buffers[i]);
-        endinterface: Ifc_channel
-    end
-
-    ////////// Router rules
-    // BI/ILx to OLx/BO buffers
-    rule il_to_router_rr;
-        // for each ILi / router in
-
-        // use IL by default
-        int idx = router_rr_counter;
-        if (router_rr_counter == n_links)
-            // use CoreOut
-            idx = coreOut;
-
-        Flit f = buffers[idx].first();
-        buffers[idx].deq();
-        
-        // is the flit useful?
-        if(f.valid == 1)
-        begin
-            // route it to an output buffer, if not mine
-            if (f.fin_dest != self_addr)
-            begin
-                int destIdx = 0;
-                if(self_addr.L1_headID == f.fin_dest.L1_headID)
-                    // destination is in same tile
-                    // route to dest
-                    destIdx = f.fin_dest.L2_ID;
-                else
-                    // destination is in different tile
-                    // route to my tile's head
-                    destIdx = headIdx;
-                
-                int diffRow = (destIdx / rows) - myRow;
-                int diffCol = (destIdx % rows) - myCol;
-
-                if(diffRow != 0)
-                    if(diffRow > 0)
-                        buffers[linkXPos].enq(f);
-                    else
-                        buffers[linkXNeg].enq(f);
-                else if (diffCol != 0)
-                    if(diffCol > 0)
-                        buffers[linkYPos].enq(f);
-                    else
-                        buffers[linkYNeg].enq(f);
-                $$3
-            end
-            else
-                // its mine, route it to the core
-                buffers[coreIn].enq(f);
-        end
-    endrule
-
-
-    //////////// We'll let the core decide when it wants to consume from coreIn and let it manage coreIn
-    // rule core_consume;
-    //     Flit f = buffers[coreIn].first();
-    //     buffers[coreIn].deq();
-
-    //     if(f.valid == 1)
-    //         begin
-    //             core.consume_flit(f);
-    //         end
-    // endrule
-
-endmodule: mesh_l2;
-endpackage: mesh_l2;
-
-
-////////
-/*
-// for core out / router in
-        interface Put#(Flit);
+            interface load_flit = interface Put#(Flit);
                 method Action put(Flit f);
-                    if (f.fin_dest != self_addr)
+                    // is the flit useful?
+                    if(f.valid == 1)
+                    begin
+                        // route it to an output buffer, if not mine
+                        if (f.fin_dest != self_addr)
                         begin
                             int destIdx = 0;
                             if(self_addr.L1_headID == f.fin_dest.L1_headID)
@@ -146,16 +69,24 @@ endpackage: mesh_l2;
 
                             if(diffRow != 0)
                                 if(diffRow > 0)
-                                    buffers[linkXPos].enq(f);
+                                    buffers[n_links * i + linkXPos].enq(f);
                                 else
-                                    buffers[linkXNeg].enq(f);
-                            else
+                                    buffers[n_links * i + linkXNeg].enq(f);
+                            else if (diffCol != 0)
                                 if(diffCol > 0)
-                                    buffers[linkYPos].enq(f);
+                                    buffers[n_links * i + linkYPos].enq(f);
                                 else
-                                    buffers[linkYNeg].enq(f);
+                                    buffers[n_links * i + linkYNeg].enq(f);
+                            $$3
                         end
-                    else
-                        buffers[coreIn].enq(f);
+                        else
+                            // its mine, route it to the core
+                            buffers[n_links * i].enq(f);
+                    end
                 endmethod
-*/
+            endinterface
+        endinterface: Ifc_channel
+    end
+    
+endmodule: mesh_l2;
+endpackage: mesh_l2;

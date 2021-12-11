@@ -68,7 +68,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                         end
                         else
                             // its mine, route it to the core
-                            buffers[0].enq(f);
+                            buffers[n_links * i].enq(f);
                     end
                 endmethod
             endinterface
