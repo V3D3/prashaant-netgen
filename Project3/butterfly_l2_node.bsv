@@ -8,7 +8,7 @@ import GetPut::*;
 module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_links));
 
   // Checks if the node is on the head side
-  Bit#(1) head_side = (self_addr.L2_ID < 2**k)?1:0;
+  Bit#(1) head_side = (self_addr.l2_ID < 2**k)?1:0;
   
   // am I a head node?
   Bool isHead = $$1;

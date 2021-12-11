@@ -12,7 +12,7 @@ import temps/chain_l1_hypercube_l2::*;
 
 module noc (Empty);
     Ifc_core c0_0 <- mkCore;
-    Ifc_node n0_0 <- hypercube_l2#(3, Node_addr {L1_headID: 0, L2_ID: 0}, c0_0, 0, 1, 2);
+    Ifc_node n0_0 <- hypercube_l2#(3, Node_addr {l1_headID: 0, l2_ID: 0}, c0_0, 0, 1, 2);
     ... for c0_1, n0_1... upto c0_7, n0_7
     ... then for c1_0, n1_0... upto c7_7, n7_7
 

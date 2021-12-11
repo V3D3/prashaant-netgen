@@ -33,7 +33,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
     // the coords of head node in my topology
     int headIdx = len / 2;
 
-    // my coord: my L2_ID
+    // my coord: my l2_ID
 
     Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
@@ -66,12 +66,12 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                             begin
                                 // assume destination is in different tile, route to head
                                 int destIdx = headIdx;
-                                if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                                if(self_addr.l1_headID == f.fin_dest.l1_headID)
                                     // destination is in same tile
                                     // route to dest
-                                    destIdx = f.fin_dest.L2_ID;
+                                    destIdx = f.fin_dest.l2_ID;
                                 
-                                int diff = destIdx - self_addr.L2_ID;
+                                int diff = destIdx - self_addr.l2_ID;
 
                                 if(diff > 0)
                                     buffers[link_count * i + linkPos].enq(f);
@@ -83,6 +83,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                                         buffers[link_count * i + 1].enq(f);
                                     else
                                         // Error!
+                                        $display("error: chain_l2.bsv:86");
                             end
                             else
                                 // its mine, route it to the core
@@ -109,7 +110,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                         if(f.valid == 1)
                         begin
                             // route it to an output buffer, if not my tile's
-                            int diff = f.fin_dest.L1_headID - self_addr.L2_ID;
+                            int diff = f.fin_dest.l1_headID - self_addr.l2_ID;
                             if(diff > 0)
                                 buffers[link_count * i + linkPos].enq(f);
                             else if(diff < 0)

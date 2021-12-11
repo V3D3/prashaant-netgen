@@ -40,13 +40,13 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     int myCol;
     if (!isL1)
     begin
-        myRow = self_addr.L2_ID / rows;
-        myCol = self_addr.L2_ID % rows;
+        myRow = self_addr.l2_ID / rows;
+        myCol = self_addr.l2_ID % rows;
     end
     else
     begin
-        myRow = self_addr.L1_headID / rows;
-        myCol = self_addr.L1_headID % rows;
+        myRow = self_addr.l1_headID / rows;
+        myCol = self_addr.l1_headID % rows;
     end
 
     // round robin and its incrementer, for arbiter
@@ -81,10 +81,10 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                             begin
                                 // assume dest is in different tile, route to head
                                 int destIdx = headIdx;
-                                if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                                if(self_addr.l1_headID == f.fin_dest.l1_headID)
                                     // destination is in same tile
                                     // route to dest
-                                    destIdx = f.fin_dest.L2_ID;
+                                    destIdx = f.fin_dest.l2_ID;
                                 
                                 int diffRow = (destIdx / rows) - myRow;
                                 int diffCol = (destIdx % rows) - myCol;
@@ -105,6 +105,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                                         buffers[link_count * i + 1].enq(f);
                                     else
                                         // Error!
+                                        $display("error: mesh_l2.bsv:108");
                             end
                             else
                                 // its mine, route it to the core
@@ -129,7 +130,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
-                            int destIdx = f.fin_dest.L1_headID;
+                            int destIdx = f.fin_dest.l1_headID;
                             
                             int diffRow = (destIdx / rows) - myRow;
                             int diffCol = (destIdx % rows) - myCol;
