@@ -35,8 +35,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
 
     // my coord: my L2_ID
 
-    Reg#(UInt#(2)) arbiter_rr_counter <- mkReg(0);
-
+    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)
             arbiter_rr_counter <= arbiter_rr_counter + 1;
@@ -81,7 +80,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                                 else
                                     // it must go outwards, to L1 routing
                                     if (isHead)
-                                        buffers[link_count * i + 1].enq(f)
+                                        buffers[link_count * i + 1].enq(f);
                                     else
                                         // Error!
                             end
