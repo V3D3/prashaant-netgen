@@ -8,8 +8,8 @@ def requirefile(file, user=False):
         out = f.read()
         f.close()
         return out
-    except OSError:
-        print('Failed to open ' + f)
+    except OSError as e:
+        print('Failed to open ' + file)
         if(user):
             print('The file is required as input. Kindly refer to README')
         else:
@@ -147,7 +147,7 @@ def chain_gen(n, id):
       nextID = Node.generateID(((i+1) == int(n/2)), id, thisClass, str(i+1))
 
       # Add an undirected link (nx.Graph() is undirected)
-      thisGraph.add_edge(myID, nextID)
+      thisGraph.add_edge(myID, nextID, src=1, dest=2)
 
   # Add this topology to the innerTopologies dict
   innerTopologies[id] = thisTopology
@@ -179,7 +179,7 @@ def ring_gen(n, id):
     # Set head in topology object, as latter node
     thisTopology.headID = node2.id
     # Link them
-    thisGraph.add_edge(node1.id, node2.id)
+    thisGraph.add_edge(node1.id, node2.id, src=1, dest=2)
 
   # Non trivial case
   else :
@@ -196,11 +196,11 @@ def ring_gen(n, id):
     for i in range(1, n-1):
       myID = Node.generateID(False, id, thisClass, str(i))
       nextID = Node.generateID(False, id, thisClass, str(i + 1))
-      thisGraph.add_edge(myID, nextID)
+      thisGraph.add_edge(myID, nextID, src=1, dest=2)
 
     # Adding links to head
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)))
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)))
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)), src=2, dest=1)
+    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)), src=1, dest=2)
 
   # Add this topology to inner topologies dict
   innerTopologies[id] = thisTopology
@@ -228,9 +228,9 @@ def hypercube_gen(id):
     for i in range(8):
       # Edges are made by inverting 1 bit in each position
       # 3 edges for our 3d hypercube
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id)
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id)
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id, src=3, dest=3)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id, src=2, dest=2)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id, src=1, dest=1)
 
     # Add inner topology to dict
     innerTopologies[id] = thisTopology
@@ -277,8 +277,23 @@ def mesh_gen(n, m, id):
       # Generate IDs for source and destination
       srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
       destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+      # Determine channels
+      src = -1
+      dest = -1
+      if jsrc < jdest:
+          src = 1
+          dest = 2
+      elif jsrc > jdest:
+          src = 2
+          dest = 1
+      elif isrc > idest:
+          src = 3
+          dest = 4
+      else:
+          src = 4
+          dest = 3
       # Add edge between src and dest
-      thisGraph.add_edge(srcID, destID)
+      thisGraph.add_edge(srcID, destID, src=src, dest=dest)
 
     # Add edges
     for i in range(n):
@@ -413,6 +428,21 @@ def folded_torus_gen(n, m, id):
     # Generate IDs and link the nodes
     srcID = Node.generateID(checkHead(isrc, jsrc), id, thisClass, str(isrc) + DELIMITER + str(jsrc))
     destID = Node.generateID(checkHead(idest, jdest), id, thisClass, str(idest) + DELIMITER + str(jdest))
+    # Determine channels
+    src = -1
+    dest = -1
+    if jsrc < jdest:
+        src = 1
+        dest = 2
+    elif jsrc > jdest:
+        src = 2
+        dest = 1
+    elif isrc > idest:
+        src = 3
+        dest = 4
+    else:
+        src = 4
+        dest = 3
     thisGraph.add_edge(srcID, destID)
 
   # Add edges in columns
@@ -511,7 +541,7 @@ def ring_head_gen(n):
     thisGraph.add_node('1', exdata=node1)
 
     # Add edge between them
-    thisGraph.add_edge('0', '1')
+    thisGraph.add_edge('0', '1', src=1, dest=2)
 
   # Non-trivial case
   else :
@@ -524,7 +554,7 @@ def ring_head_gen(n):
 
     # Adding links
     for i in range(n):
-      thisGraph.add_edge(str(i), str((i + 1) % n))
+      thisGraph.add_edge(str(i), str((i + 1) % n), src=1, dest=2)
 
   return thisTopology
 
@@ -545,7 +575,7 @@ def chain_head_gen(n):
 
     # Add links
     for i in range(0, n-1):
-      thisGraph.add_edge(str(i), str(i+1))
+      thisGraph.add_edge(str(i), str(i+1), src=1, dest=2)
 
   else:
     # Sanity check
@@ -571,9 +601,9 @@ def hypercube_head_gen():
   
   # Add links
   for i in range(n):
-    thisGraph.add_edge(str(i), str(i ^ 1))
-    thisGraph.add_edge(str(i), str(i ^ 2))
-    thisGraph.add_edge(str(i), str(i ^ 4))
+    thisGraph.add_edge(str(i), str(i ^ 1), src=3, dest=3)
+    thisGraph.add_edge(str(i), str(i ^ 2), src=2, dest=2)
+    thisGraph.add_edge(str(i), str(i ^ 4), src=1, dest=1)
 
   return thisTopology
 
@@ -608,7 +638,23 @@ def mesh_head_gen(n,m):
   def addEdgeSafe(isrc, jsrc, idest, jdest):
     if(not checkNode(idest, jdest)):
       return
-    thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest))
+
+    # Determine channels
+    src = -1
+    dest = -1
+    if jsrc < jdest:
+        src = 1
+        dest = 2
+    elif jsrc > jdest:
+        src = 2
+        dest = 1
+    elif isrc > idest:
+        src = 3
+        dest = 4
+    else:
+        src = 4
+        dest = 3
+    thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest), src=src, dest=dest)
 
   # Add edges
   for i in range(n):
@@ -706,7 +752,22 @@ def folded_torus_head_gen(n,m):
 
     srcID = genID(isrc, jsrc)
     destID = genID(idest, jdest)
-    thisGraph.add_edge(srcID, destID)
+    # Determine channels
+    src = -1
+    dest = -1
+    if jsrc < jdest:
+        src = 1
+        dest = 2
+    elif jsrc > jdest:
+        src = 2
+        dest = 1
+    elif isrc > idest:
+        src = 3
+        dest = 4
+    else:
+        src = 4
+        dest = 3
+    thisGraph.add_edge(srcID, destID, src=src, dest=dest)
 
   # Add edges in columns
   for j in range(m):
@@ -761,8 +822,7 @@ def mkEdge(G, edge):
         src += 1
     if (G.nodes[edge[1]]['exdata'].isHead):
         dest += 1
-    res = f'        mkConnection(n{edge[0]}.node_channels[{src}], n{edge[1]}.node_channels[{dest}]);'
-    G.remove_edge(edge[0], edge[1])
+    res = f'        mkConnection(n{edge[0]}.node_channels[{src}], n{edge[1]}.node_channels[{dest}]);\n'
     return res
 
 # Add L1 (Head Router) Nodes, and edges among them
@@ -776,37 +836,45 @@ for node in G.nodes:
     # first two fields: n_links (int) and self_addr (Node_addr)
     nodeId = 'n' + node
     if tc == 'R':
-        OUT += f'    Ifc_node {nodeId} <- ring_l2({len(G.edges(node))}, {{l1_headID: {int(node)}, l2_ID: 999}});\n'
+        OUT += f'        Ifc_node {nodeId} <- ring_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}});\n'
     elif tc == 'C':
-        OUT += f'    Ifc_node {nodeId} <- chain_l2({len(G.edges(node))}, {{l1_headID: {int(node)}, l2_ID: 999}}, {L1_n}, 1, 2, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- chain_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}}, {L1_n}, 1, 2, False, True);\n'
     elif tc == 'M':
         headIdMode = 1
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
         nodeIntId = nodeIntId[0] * L1_n + nodeIntId[1]
-        OUT += f'Ifc_node {nodeId} <- mesh_l2({len(G.edges(node))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- mesh_l2({len(G.edges(node, data=True))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
     # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
     #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
     elif tc == 'F':
         headIdMode = 1
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
         nodeIntId = nodeIntId[0] * L1_n + nodeIntId[1]
-        OUT += f'Ifc_node {nodeId} <- folrus_l2({len(G.edges(node))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- folrus_l2({len(G.edges(node, data=True))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
     elif tc == 'H':
-        OUT += f'Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node))}, {{l1_headID: {int(node)}, l2_ID: 999}}, 1, 2, 3, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}}, 1, 2, 3, False, True);\n'
     else:
         print('Unknown topology provided in L1Topology.txt: ' + tc)
         exit()
-    for edge in G.edges(node):
+
+    edgesToRemove = []
+    for edge in G.edges(node, data=True):
+        edgesToRemove.append(edge)
         OUT += mkEdge(G, edge)
+
+    for edge in edgesToRemove:
+        G.remove_edge(edge[0], edge[1])
 
 OUT += "\n\n // [2/3] Adding instantiation of L2 Nodes \n\n"
 print("[2/3] Adding instantiation of L2 Nodes")
 
 # Add L2 nodes and their edges
 for head in innerTopologies:
+    
     T = innerTopologies[head]
     G = T.topoGraph
     tc = T.topoClass
+    OUT += f'\n\n // L2 Generation : Class: {tc}, HeadID: {head}\n\n'
 
     headIntId = 0
     if (headIdMode == 0):
@@ -817,30 +885,34 @@ for head in innerTopologies:
 
     for node in G.nodes:
         nodeId = 'n' + node
-        node = G.nodes[node]['exdata'].inID
+        nodeIntId = G.nodes[node]['exdata'].inID
 
         if tc == 'R':
-            OUT += f'        Ifc_node {nodeId} <- ring_l2({len(G.edges(node))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(node)}}});\n'
+            OUT += f'        Ifc_node {nodeId} <- ring_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}});\n'
         elif tc == 'C':
-            OUT += f'        Ifc_node {nodeId} <- chain_l2({len(G.edges(node))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(node)}}}, {L1_n}, 1, 2, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- chain_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, 1, 2, {G.nodes[node]["exdata"].isHead}, False);\n'
         elif tc == 'M':
-            nodeIntId = [int(i) for i in node.split(DELIMITER)]
+            nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]
-            OUT += f'        Ifc_node {nodeId} <- mesh_l2({len(G.edges(node))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- mesh_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
         # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
         #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
         elif tc == 'F':
-            nodeIntId = [int(i) for i in node.split(DELIMITER)]
+            nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]
-            OUT += f'        Ifc_node {nodeId} <- folrus_l2({len(G.edges(node))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- folrus_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
         elif tc == 'H':
-            OUT += f'        Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, 1, 2, 3, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, 1, 2, 3, {G.nodes[node]["exdata"].isHead}, False);\n'
         else:
             print('Unknown topology provided in L1Topology.txt: ' + tc)
             exit()
 
-        for edge in G.edges(node):
+        edgesToRemove = []
+        for edge in G.edges(node, data=True):
             OUT += mkEdge(G, edge)
+            edgesToRemove.append(edge)
+        for edge in edgesToRemove:
+            G.remove_edge(edge[0], edge[1])
 
 OUT += "\n\n // [3/3] Adding instantiation of cores; linking cores and routers to nodes \n\n";
 print("[3/3] Adding instantiation of cores and linking to nodes")
@@ -850,15 +922,15 @@ for head in innerTopologies:
     G = innerTopologies[head].topoGraph
 
     for node in G.nodes:
-        OUT += f'        Ifc_core c{node} <- mkCore;'
-        OUT += f'        mkConnection(c{node}, n{node}.node_channels[0]);'
+        OUT += f'        Ifc_core c{node} <- mkCore;\n'
+        OUT += f'        mkConnection(c{node}, n{node}.node_channels[0]);\n'
 
         if G.nodes[node]["exdata"].isHead:
-            OUT += f'        mkConnection(n{head}.node_channels[0], n{node}.node_channels[1]);'
+            OUT += f'        mkConnection(n{head}.node_channels[0], n{node}.node_channels[1]);\n'
 
 OUT += requirefile('noc_template_tail.bsv')
 
 print('Generation complete. Writing file to disk as "noc.bsv".')
-f = open('noc.bsv')
+f = open('noc.bsv', 'w')
 f.write(OUT)
 f.close()
