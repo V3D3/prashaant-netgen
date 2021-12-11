@@ -67,13 +67,13 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                             int diffRow = (destIdx / rows) - myRow;
                             int diffCol = (destIdx % rows) - myCol;
 
-                            if(diffRow != 0)
-                                if(diffRow > 0)
+                            if (diffCol != 0)
+                                if(diffCol > 0)
                                     buffers[n_links * i + linkXPos].enq(f);
                                 else
                                     buffers[n_links * i + linkXNeg].enq(f);
-                            else if (diffCol != 0)
-                                if(diffCol > 0)
+                            else if(diffRow != 0)
+                                if(diffRow > 0)
                                     buffers[n_links * i + linkYPos].enq(f);
                                 else
                                     buffers[n_links * i + linkYNeg].enq(f);
@@ -87,6 +87,6 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
             endinterface
         endinterface: Ifc_channel
     end
-    
+
 endmodule: mesh_l2;
 endpackage: mesh_l2;
