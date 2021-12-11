@@ -78,8 +78,8 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                 int destIdx = headIdx;
                                 if(self_addr.l1_headID == f.fin_dest.l1_headID)
 					// destination is in the same tile
-					headIdx = f.fin_dest.l2_ID
-				if(self_addr.l2_ID != headIdx)
+					destIdx = f.fin_dest.l2_ID
+				if(self_addr.l2_ID != destIdx)
 				begin
                                     // destination is in same tile
                                     // route to dest
