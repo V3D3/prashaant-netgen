@@ -5,108 +5,103 @@ import toplevel_defs ::*;
 import GetPut::*;
 
 
-module butterfly_switch#(int k, Node_addr self_addr)(Ifc_node#(n_links));
+module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_node#(n_links));
 
-  // Checks if the node is on the head side
-  Bit#(1) head_side = (self_addr.l2_ID < 2**k)?1:0;
+        // In case of a L2 butterfly topology, Channel 0,1 are towards the head, and 2,3 are away from head
+	// Links 0 and 2 are direct links, while 1 and 3 are diagonal links
   
-	/*
-  For a straightforward algorithm, we assume there is a VC for each destination node - (2*k)*2
-  For a non-head node, there are only 2 input links from the different switches
-  Hence, number of buffers required are 2*(2 + 1) - one for the core
-  Hence there would be 4 VCs in total. VC1, VC2 correspond to link1, while VC3 and VC4 correspond to link2 
-  Each input link would have buffers corresponding to these 4 VCs. Additionally, the flit generation module would have a buffer for 4 VCs (for uniformity, though a generated flit can only be inserted in the lower VC)
-	*/
+    // A butterfly switch has 4 links by default
+    int link_count = 4;
+    
+    
+    // buffers for:
+    //       each IL    for each OL
+    Vector#(link_count * link_count, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
+    // my coord: my L2_ID
 
+    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    rule rr_arbiter_incr;
+        if (arbiter_rr_counter < link_count - 1)                      
+            arbiter_rr_counter <= arbiter_rr_counter + 1;
+        else
+            arbiter_rr_counter <= 0;
+    endrule
 
-	// Instantiating VCs * (n_links + 1 ) number of FIFOs, which would act as the buffers.
-	// The routers would store flits into the corresponding buffers, and the arbiter picks and transmits flits from its set of buffers in a round-robin fashion
-	
-	
-  
-  
-	Vector#((n_links + 1)*4, FIFO#(Flit)) buff_vc <- replicateM(mkFIFO());
-	
-	// Registers to store the Round robin Count corresponding to each output link
-	Reg#(int) round_robin_1 <- mkReg(1);
-	Reg#(int) round_robin_2 <- mkReg(3);
+    // Link Rules
+    // Case: I am not a L1 switch
+    if (!isL1)
+    begin
+        for(int i = 0; i < link_count; i++)
+        begin
+            // attach to input and output channels
+            node_channels[i] = interface Ifc_channel;
+                // send flit from me to others
+                interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
+                // receive a flit from somewhere
+                interface load_flit = interface Put#(Flit);
+                    method Action put(Flit f);
+                        // is the flit useful?
+                        if(f.valid == 1)
+                        begin
+		       	    int destIdx = 0; 
+                            // route it to an output buffer, if not mine
+                            if (f.fin_dest.l1_headID != self_addr.l1_headID)
+                            begin
+                                // destination is in different tile, route to head
+				
 
-	// Rule to get the flits from the Core
-	
-	rule get_core_flit;
-	
-		if core.gen_Flit                                 /// this rule to be handled
-	
-	endrule
+			    if(self_addr.l1_headID == f.fin_dest.l1_headID)
+				begin
+                                    // destination is in same tile
+                                    // route to dest
+				    
+       	                            buffers[link_count * i].enq(f);
+         			 end
+				    
 
-	// Rules to update the Round Robin counter
-	rule round_robin_count_1;
-
-		// Reset the counter to the initial position after one interation of going around the buffers
-
-		if (round_robin_1 == 1) round_robin_1 <= 2;
-		else if (round_robin_1 == 2) round_robin_1 <= 5;
-		else if (round_robin_1 == 5) round_robin_1 <= 6;
-		else if (round_robin_1 == 6) round_robin_1 <= 9;
-		else if (round_robin_1 == 9) round_robin_1 <= 10;
-		else if (round_robin_1 == 10) round_robin_1 <= 1;
-	endrule
-
-	rule round_robin_count_2;
-
-		// Reset the counter to the initial position after one interation of going around the buffers
-
-		if (round_robin_2 == 3) round_robin_2 <= 4;
-		else if (round_robin_2 == 4) round_robin_2 <= 7;
-		else if (round_robin_2 == 7) round_robin_2 <= 8;
-		else if (round_robin_1 == 8) round_robin_1 <= 11;
-		else if (round_robin_1 == 11) round_robin_1 <= 12;
-		else if (round_robin_2 == 12) round_robin_2 <= 3;
-	endrule
-
-
-
-
-
-	// Interface definitions
-
-	channel[0] = interface Ifc_channel;
-			interface send_flit = toGet(buff_vc[round_robin_1 -1]);
-
-			interface load_flit = interface Put#(Flit);   // check how to add int for VC (previous node should pass this) 
-							method Action put(Flit f);
-								if (f.fin_dest ! = self_addr)
-									if (f.vc == 1)
-									 	buff_vc[3].enqueue(f);
-									else if (self_addr.row_num == 1)
-										f.vc = 1;
-										buff_vc[3].enqueue(f); 
-									else
-										buff_vc[2].enqueue(f);
-								else
-									core.consume_flit(f);
-							endmethod
-					     endinterface;
-
-	channel[1] = interface Ifc_channel;
-			interface send_flit = toGet(buff_vc[round_robin_2 - 1]);
-
-			interface load_flit = interface Put#(Flit);
-							method Action put(Flit f);
-								if (f.fin_dest ! = self_addr)
-									if (f.vc == 1)
-									 	buff_vc[1].enqueue(f);
-									else if (self_addr.row_num == 2)
-										f.vc = 1;
-										buff_vc[1].enqueue(f);       
-									else
-										buff_vc[0].enqueue(f);
-								else
-									core.consume_flit(f);
-							endmethod
-					     endinterface;
-
+				 else
+                                    // it must go outwards, to L1 routing
+                                    if (isHead)
+                                        buffers[link_count * i + 1].enq(f);
+                                    else
+                                        // Error!
+                            end
+                            else
+                                // its mine, route it to the core
+                                buffers[link_count * i].enq(f);
+                        end
+                    endmethod
+                endinterface
+            endinterface: Ifc_channel
+        end
+    end
+    else
+    // Case: I am a L1 head router (start: 1)
+    begin
+        for(int i = 0; i < link_count; i++)
+        begin
+            // attach to input and output channels
+            node_channels[i] = interface Ifc_channel;
+                // send flit from me to others
+                interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
+                // receive a flit from somewhere
+                interface load_flit = interface Put#(Flit);
+                    method Action put(Flit f);
+                        // is the flit useful?
+                        if(f.valid == 1)
+                        begin
+			    if(f.fin_dest.l1_headID != self_addr.l1_headID)
+       	                            buffers[link_count * i].enq(f);				    
+                            else
+                                // its mine, route it to the node for internal routing
+                                buffers[2*link_count * i].enq(f);
+                        end
+                    endmethod
+                endinterface
+            endinterface: Ifc_channel
+        end
+    end
 
 endmodule
 
