@@ -5,7 +5,7 @@ import toplevel_defs ::*;
 import GetPut::*;
 
 
-module ring_l2#(int n_links, Node_addr self_addr)(Ifc_node#(n_links));
+module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_links));
 
 	/*
 	 Date line algorithm is to be implemented.
