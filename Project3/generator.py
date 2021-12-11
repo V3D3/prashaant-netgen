@@ -57,6 +57,8 @@ class Node:
         self.inID = inID
         # is this node a switch or a tile?
         self.isSwitch = isSwitch
+        # max number of edges I had (before being used in noc.bsv generation)
+        self.maxEdges = 0
 
         # string id for this node, uniquely identifies it
         self.id = self.generateID(isHead, headID, inClass, inID, isSwitch)
@@ -831,28 +833,33 @@ tc = outerTopology.topoClass
 
 print('[1/3] Adding instantiation of L1 (Head Router) Nodes')
 
+# Preprocessing: cacheing the current number of edges
+for node in G.nodes:
+    G.nodes[node]['exdata'].maxEdges = len(G.edges(node))
+
 headIdMode = 0
 for node in G.nodes:
     # first two fields: n_links (int) and self_addr (Node_addr)
     nodeId = 'n' + node
+    ec = G.nodes[node]['exdata'].maxEdges
     if tc == 'R':
-        OUT += f'        Ifc_node {nodeId} <- ring_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}});\n'
+        OUT += f'        Ifc_node {nodeId} <- ring_l2({ec}, {{l1_headID: {int(node)}, l2_ID: 999}});\n'
     elif tc == 'C':
-        OUT += f'        Ifc_node {nodeId} <- chain_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}}, {L1_n}, 1, 2, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- chain_l2({ec}, {{l1_headID: {int(node)}, l2_ID: 999}}, {L1_n}, 1, 2, False, True);\n'
     elif tc == 'M':
         headIdMode = 1
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
         nodeIntId = nodeIntId[0] * L1_n + nodeIntId[1]
-        OUT += f'        Ifc_node {nodeId} <- mesh_l2({len(G.edges(node, data=True))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- mesh_l2({ec}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
     # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
     #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
     elif tc == 'F':
         headIdMode = 1
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
         nodeIntId = nodeIntId[0] * L1_n + nodeIntId[1]
-        OUT += f'        Ifc_node {nodeId} <- folrus_l2({len(G.edges(node, data=True))}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- folrus_l2({ec}, {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
     elif tc == 'H':
-        OUT += f'        Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(node)}, l2_ID: 999}}, 1, 2, 3, False, True);\n'
+        OUT += f'        Ifc_node {nodeId} <- hypercube_l2({ec}, {{l1_headID: {int(node)}, l2_ID: 999}}, 1, 2, 3, False, True);\n'
     else:
         print('Unknown topology provided in L1Topology.txt: ' + tc)
         exit()
@@ -867,6 +874,12 @@ for node in G.nodes:
 
 OUT += "\n\n // [2/3] Adding instantiation of L2 Nodes \n\n"
 print("[2/3] Adding instantiation of L2 Nodes")
+
+# Preprocessing: cacheing the current number of edges
+for head in innerTopologies:
+    G = innerTopologies[head].topoGraph
+    for node in innerTopologies[head].topoGraph.nodes:
+        G.nodes[node]['exdata'].maxEdges = len(G.edges(node))
 
 # Add L2 nodes and their edges
 for head in innerTopologies:
@@ -886,23 +899,24 @@ for head in innerTopologies:
     for node in G.nodes:
         nodeId = 'n' + node
         nodeIntId = G.nodes[node]['exdata'].inID
+        ec = G.nodes[node]['exdata'].maxEdges
 
         if tc == 'R':
-            OUT += f'        Ifc_node {nodeId} <- ring_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}});\n'
+            OUT += f'        Ifc_node {nodeId} <- ring_l2({ec}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}});\n'
         elif tc == 'C':
-            OUT += f'        Ifc_node {nodeId} <- chain_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, 1, 2, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- chain_l2({ec}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, 1, 2, {G.nodes[node]["exdata"].isHead}, False);\n'
         elif tc == 'M':
             nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]
-            OUT += f'        Ifc_node {nodeId} <- mesh_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- mesh_l2({ec}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
         # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
         #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
         elif tc == 'F':
             nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]
-            OUT += f'        Ifc_node {nodeId} <- folrus_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- folrus_l2({ec}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
         elif tc == 'H':
-            OUT += f'        Ifc_node {nodeId} <- hypercube_l2({len(G.edges(node, data=True))}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, 1, 2, 3, {G.nodes[node]["exdata"].isHead}, False);\n'
+            OUT += f'        Ifc_node {nodeId} <- hypercube_l2({ec}, {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, 1, 2, 3, {G.nodes[node]["exdata"].isHead}, False);\n'
         else:
             print('Unknown topology provided in L1Topology.txt: ' + tc)
             exit()
