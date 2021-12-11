@@ -855,3 +855,10 @@ for head in innerTopologies:
 
         if G.nodes[node]["exdata"].isHead:
             OUT += f'        mkConnection(n{head}.node_channels[0], n{node}.node_channels[1]);'
+
+OUT += requirefile('noc_template_tail.bsv')
+
+print('Generation complete. Writing file to disk as "noc.bsv".')
+f = open('noc.bsv')
+f.write(OUT)
+f.close()
