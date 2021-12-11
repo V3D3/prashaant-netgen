@@ -9,11 +9,22 @@ import ClientServer ::*;
 typedef struct { 
 
 	// Position of the tile in the L1 layer
-	int L1_headID;	
+	int l1_headID;	
 	// Node postion within the Tile
-	int L2_ID;
+	int l2_ID;
 	
 	} Node_addr;  
+
+// Defining structure for Butterfly Switch address
+typedef struct { 
+
+	// Position of the tile in the L1 layer
+	int l1_headID;
+	// Stage in the topology
+	int stage;
+	// Switch position in stage
+	
+	} Butterfly_switch_addr;  
 
 
 // Defining a structure for the flit
