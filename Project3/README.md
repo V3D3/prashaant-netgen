@@ -1,7 +1,8 @@
 Usage:
 1. Create a core.bsv file, which has a module named mkCore, satisfying the Ifc_core defined in toplevel_defs.bsv.
 2. Create L1Topology.txt and L2Topology.txt in the same format as previously followed
-    ```L1Topology.txt:<br>
+    ```
+    L1Topology.txt:<br>
     <Topology>, <Dimension 1>, <Dimension 2><EOF>
     L2Topology.txt:
     <Topology 1>, <Dimension 1 of T1>, <Dimension 2 of T1>
