@@ -64,8 +64,13 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
                             if (f.fin_dest != self_addr)
                             begin
                                 // assume destination is in different tile, route to head
-                                int destIdx = headIdx;
+                                int destIdx = 0;
                                 if(self_addr.l1_headID == f.fin_dest.l1_headID)
+					destIdx = f.fin_dest.l2_ID;
+				if((destIdx < 2**k && self_addr.l2_ID < 2**k) || (destIdx > 2**k && self_addr.l2_ID > 2**k))
+					// Error
+					$display("Illegal routing in butterfly");
+				else if (destIdx != self_addr.l2_ID)
 				begin
                                     // destination is in same tile
                                     // route to dest
@@ -81,6 +86,7 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
                                         buffers[link_count * i + 1].enq(f);
                                     else
                                         // Error!
+					$display("Error");
                             end
                             else
                                 // its mine, route it to the core
@@ -106,11 +112,15 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
-			    if(f.fin_dest.l1_headID != self_addr.l1_headID)
-       	                            buffers[link_count * i].enq(f);				    
-                            else
+			    if(f.fin_dest.l1_headID == self_addr.l1_headID)
                                 // its mine, route it to the node for internal routing
                                 buffers[2*link_count * i].enq(f);
+
+			    else if((f.fin_dest.l1_headID < 2**k && self_addr.l1_headID < 2**k) || (f.fin_dest.l1_headID > 2**k && self_addr.l1_headID > 2**k))
+				// Error
+				$display("Illegal routing in butterfly");
+                            else
+       	                        buffers[link_count * i].enq(f);				    
                         end
                     endmethod
                 endinterface
