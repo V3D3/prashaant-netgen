@@ -77,6 +77,9 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                 // assume destination is in different tile, route to head
                                 int destIdx = headIdx;
                                 if(self_addr.l1_headID == f.fin_dest.l1_headID)
+					// destination is in the same tile
+					headIdx = f.fin_dest.l2_ID
+				if(self_addr.l2_ID != headIdx)
 				begin
                                     // destination is in same tile
                                     // route to dest
@@ -102,6 +105,7 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                         buffers[2*link_count * i + 1].enq(f);
                                     else
                                         // Error!
+					$display("Error");
                             end
                             else
                                 // its mine, route it to the core
