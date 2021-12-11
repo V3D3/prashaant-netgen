@@ -45,12 +45,11 @@ typedef struct {
 
 
 
-// Interface for the flit generator
+// Interface for the Core - flit generator + consumer
 interface Ifc_core;
 	
-	// method that returns a flit -- check who will set the enable for this
-	method Flit gen_flit;
-	method Action consume_flit(Flit f);
+	interface Get#(Flit) send_flit;
+	interface Put#(Flit) load_flit;
 
 endinterface
 
@@ -82,9 +81,9 @@ interface Ifc_node#(n_links);   // Since the links are fully duplex, number of i
 endinterface
 
 interface Ifc_channel;
-	
+
+	// Input channel - loads filt from the previous node for routing
 	interface Put#(Flit) load_flit;
-	interface input_link il;
 	// Output channel - sends flits from the arbiter
 	interface Get#(Flit) send_flit; 
 	
