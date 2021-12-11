@@ -10,18 +10,16 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
     // Core will have access to one input and one output buffer
 
     // buffers for:
-    //        links   core  in  out   out VC1s
-    Vector#((n_links + 1) * (1 + 1) + n_links, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    // (core is treated as an IL/OL, it is at 0)
+    //         each IL       for each OL   VCs
+    Vector#((n_links + 1) * (n_links + 1) * 2, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     $$0
-    // up to n_links - 1: ILi
-    // n_links to 2n_links - 1: OLi VC0
-    // 2n_links to 3n_links - 1: OLi VC1
-    // 3n_links: IC
-    // 3n_links + 1: OC
-
-    // index of buffers to core
-    int coreIn = 3 * n_links;
-    int coreOut = 3 * n_links + 1;
+    // we have (n_links + 1) buckets of size (n_links + 1) * 2
+    // one bucket per IL
+    // each bucket has 2 sections, each of size (n_links + 1)
+    // one section per VC
+    // each section has n_links + 1 FIFOs
+    // one FIFO per OL
 
     // the coords of head node in my topology
     int headIdx = 0;
@@ -33,100 +31,81 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
     // am i a head node?
     bool isHead = $$1;
 
-    // round robin and its incrementer, for router
-    Reg#(int) router_rr_counter <- mkReg(0);
-    rule rr_in_incr;
-        if (router_rr_counter == n_links + 1)
-            router_rr_counter <= 0
+    // round robin and its incrementer, for arbiter
+    Reg#(UInt#(3))  arbiter_rr_counter <- mkReg(0);
+    Reg#(Bit)       arbiter_rr_vc_counter <- mkReg(0);
+    rule rr_arbiter_incr;
+        if (arbiter_rr_counter < n_links)
+            arbiter_rr_counter <= arbiter_rr_counter + 1;
         else
-            router_rr_counter <= router_rr_counter + 1;
-    endrule
-
-    // bits to indicate VC serviced by arbiter (roundrobin fashion)
-    Reg#(Bit#(n_links)) arbiter_rr_counters <- mkReg(0);
-    rule rr_out_incr;
-        arbiter_rr_counters <= ~arbiter_rr_counters;
+            arbiter_rr_counter <= 0;
+            arbiter_rr_vc_counter <= ~arbiter_rr_vc_counter;
     endrule
 
     $$2
 
     ////////// Link Rules
     // for each of my links
-    for(int i = 0; i < n_links; i++)
+    for(int i = 0; i <= n_links; i++)
     begin
         // attach to input and output channels
         node_channels[i] = interface Ifc_channel;
             // send flit from me to others
-            interface send_flit = interface Get#(Flit);
-                method ActionValue get();
-                    int idx = n_links + i;
-                    if (arbiter_rr_counters[i] == 1)
-                        idx = idx + n_links;
-                    
-                    buffers[idx].deq();
-                    return buffers[idx].first();
-                endmethod
-            endinterface
+            interface send_flit = toGet(buffers[2 * n_links * arbiter_rr_counter
+                                            +   n_links * arbiter_rr_vc_counter
+                                            +   i]);
             // receive a flit from somewhere
-            interface load_flit = toPut(buffers[i]);
-        endinterface: Ifc_channel
-    end
-
-    ////////// Router rules
-    // BI/ILx to OLx/BO buffers
-    rule il_to_router_rr;
-        // for each ILi / router in
-        Flit f;
-        // use IL by default
-        int idx = router_rr_counter;
-        if (router_rr_counter == n_links)
-            // use CoreOut
-            idx = coreOut;
-        
-        f = buffers[idx].first();
-        buffers[idx].deq();
-        
-        // is the flit useful?
-        if(f.valid == 1)
-            begin
-                // route it to an output buffer, if not mine
-                if (f.fin_dest != self_addr)
+            interface load_flit = interface Put#(Flit);
+                method Action put(Flit f);
+                    if(f.valid == 1)
                     begin
-                        int destIdx = 0;
-                        if(self_addr.L1_headID == f.fin_dest.L1_headID)
-                            // destination is in same tile
-                            // route to dest
-                            destIdx = f.fin_dest.L2_ID;
-                        else
-                            // destination is in different tile
-                            // route to my tile's head
-                            destIdx = headIdx;
-                        
-                        int diffRow = (destIdx / rows) - myRow;
-                        int diffCol = (destIdx % rows) - myCol;
-
-                        if(diffRow != 0)
-                            if(diffRow > 0)
-                                buffers[linkXPos].enq(f);
+                        // route it to an output buffer, if not mine
+                        if (f.fin_dest != self_addr)
+                        begin
+                            int destIdx = 0;
+                            if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                                // destination is in same tile
+                                // route to dest
+                                destIdx = f.fin_dest.L2_ID;
                             else
-                                buffers[linkXNeg].enq(f);
-                        else if (diffCol != 0)
+                                // destination is in different tile
+                                // route to my tile's head
+                                destIdx = headIdx;
+                            
+                            int diffRow = (destIdx / rows) - myRow;
+                            int diffCol = (destIdx % rows) - myCol;
+                            
+                            if (diffCol != 0)
+                                if(diffCol > 0)
+                                    buffers[2 * n_links * i + linkXPos].enq(f);
+                                else
+                                    buffers[2 * n_links * i + linkXNeg].enq(f);
+                            else if(diffRow != 0)
                             begin
-                                int idx = linkYPos;
-                                if ((f.vc == 1) || (myCol == 1))
-                                    begin
-                                        idx = idx + n_links;
-                                        f.vc = 1;
-                                    end
+                                int idx = 2 * n_links * i;
+                                if(diffRow > 0)
+                                    idx += linkYPos;
+                                else
+                                    idx += linkYNeg;
+
+                                if ((f.vc == 1) || (myRow == 1))
+                                begin
+                                    idx = idx + n_links;
+                                    f.vc = 1;
+                                end
+                                
                                 buffers[idx].enq(f);
                             end
-                        $$3
+                            $$3
+                        end
+                        else
+                            // its mine, route it to the core
+                            buffers[2 * n_links * i].enq(f);
                     end
-                else
-                    // its mine, route it to the core
-                    buffers[coreIn].enq(f);
-            end
-    endrule
+                endmethod
+            endinterface
+        endinterface: Ifc_channel
+    end
 
 endmodule: folrus_l2;
 endpackage: folrus_l2;
