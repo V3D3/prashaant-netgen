@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg, bool isHead, bool isL1) (Ifc_node#(n_links));
+module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Two virtual channels per link, routing is X (for locating ring, shortest arc), then Date-line in Y
     // n_links: 4 (all)
     // Core will have access to one input and one output buffer

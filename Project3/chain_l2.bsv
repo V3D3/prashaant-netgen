@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int linkNeg, bool isHead, bool isL1) (Ifc_node#(n_links));
+module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int linkNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Only one virtual channel per link, routing is simple shortest path
     // n_links: 1 (edge) / 2 (internal)
     // Core will have access to one input and one output buffer
@@ -110,7 +110,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                         if(f.valid == 1)
                         begin
                             // route it to an output buffer, if not my tile's
-                            int diff = f.fin_dest.l1_headID - self_addr.l2_ID;
+                            int diff = f.fin_dest.l1_headID - self_addr.11_headID;
                             if(diff > 0)
                                 buffers[link_count * i + linkPos].enq(f);
                             else if(diff < 0)

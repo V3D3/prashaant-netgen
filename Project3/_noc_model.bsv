@@ -8,8 +8,6 @@ import GetPut::*;
 // L1 C,3,1
 // L2 all H,8,8
 
-import temps/chain_l1_hypercube_l2::*;
-
 module noc (Empty);
     Ifc_core c0_0 <- mkCore;
     Ifc_node n0_0 <- hypercube_l2#(3, Node_addr {l1_headID: 0, l2_ID: 0}, c0_0, 0, 1, 2);

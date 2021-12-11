@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDiff1, int linkDiff0, bool isHead, bool isL1) (Ifc_node#(n_links));
+module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDiff1, int linkDiff0, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Eight virtual channels per link, routing is via flipping Most Significant Differing Bit
     // n_links: 3 (all)
     // Core will have access to one input and one output buffer
