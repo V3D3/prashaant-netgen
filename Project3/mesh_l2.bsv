@@ -26,7 +26,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     // am i a head node?
     bool isHead = $$1;
 
-    // round robin and its incrementer, for router
+    // round robin and its incrementer, for arbiter
     Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < n_links)
@@ -39,7 +39,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
 
     ////////// Link Rules
     // for each of my links
-    for(int i = 0; i < n_links; i++)
+    for(int i = 0; i <= n_links; i++)
     begin
         // attach to input and output channels
         node_channels[i] = interface Ifc_channel;

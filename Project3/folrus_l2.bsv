@@ -38,8 +38,10 @@ module folrus_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int rows, int
         if (arbiter_rr_counter < n_links)
             arbiter_rr_counter <= arbiter_rr_counter + 1;
         else
+        begin
             arbiter_rr_counter <= 0;
             arbiter_rr_vc_counter <= ~arbiter_rr_vc_counter;
+        end
     endrule
 
     $$2

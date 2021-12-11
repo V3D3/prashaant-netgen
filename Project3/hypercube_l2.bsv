@@ -10,24 +10,18 @@ module hypercube_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int linkDi
     // Core will have access to one input and one output buffer
 
     // buffers for:
-    //        links   core  in  out     out VCs
-    Vector#((n_links + 1) * (1 + 1) + 7 * n_links, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    // (core is treated as an IL/OL, it is at 0)
+    //         each IL       for each OL   VCs
+    Vector#((n_links + 1) * (n_links + 1) * 8, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     $$0
     // up to n_links - 1: ILi
-    // n_links to 2n_links - 1: OLi VC0
-    // 2n_links to 3n_links - 1: OLi VC1
-    // 3n_links to 4n_links - 1: OLi VC2
-    // 4n_links to 5n_links - 1: OLi VC3
-    // 5n_links to 6n_links - 1: OLi VC4
-    // 6n_links to 7n_links - 1: OLi VC5
-    // 7n_links to 8n_links - 1: OLi VC6
-    // 8n_links to 9n_links - 1: OLi VC7
-    // 9n_links: IC
-    // 9n_links + 1: OC
-
-    // index of buffers to core
-    int coreIn = 9 * n_links;
-    int coreOut = 9 * n_links + 1;
+    
+    // we have (n_links + 1) buckets of size (n_links + 1) * 8
+    // one bucket per IL
+    // each bucket has 8 sections, each of size (n_links + 1)
+    // one section per VC
+    // each section has n_links + 1 FIFOs
+    // one FIFO per OL
 
     // the coords of head node in my topology
     int headIdx = 0;
@@ -37,20 +31,19 @@ module hypercube_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int linkDi
     // am i a head node?
     bool isHead = $$1;
 
-    // round robin and its incrementer, for router
-    Reg#(int) router_rr_counter <- mkReg(0);
-    rule rr_in_incr;
-        if (router_rr_counter == n_links + 1)
-            router_rr_counter <= 0
+    // round robin and its incrementer, for arbiter
+    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    Reg#(UInt#(3)) arbiter_rr_vc_counter <- mkReg(0);
+    rule rr_arbiter_incr;
+        if (arbiter_rr_counter < n_links)
+            arbiter_rr_counter <= arbiter_rr_counter + 1;
         else
-            router_rr_counter <= router_rr_counter + 1;
-    endrule
-
-    Vector#(n_links, Reg#(Int#(3))) arbiter_rr_counters <- replicateM(mkReg(0));
-    rule rr_out_incr;
-        for(int i = 0; i < n_links; i++)
         begin
-            arbiter_rr_counters[i]++;
+            arbiter_rr_counter <= 0;
+            if (arbiter_rr_vc_counter < 7)
+                arbiter_rr_vc_counter <= arbiter_rr_vc_counter + 1;
+            else
+                arbiter_rr_vc_counter <= 0;
         end
     endrule
 
@@ -58,70 +51,52 @@ module hypercube_l2#(int n_links, Node_addr self_addr, Ifc_core tile, int linkDi
 
     ////////// Link Rules
     // for each of my links
-    for(int i = 0; i < n_links; i++)
+    for(int i = 0; i <= n_links; i++)
     begin
         // attach to input and output channels
         node_channels[i] = interface Ifc_channel;
             // send flit from me to others
-            interface send_flit = interface Get#(Flit);
-                method ActionValue get();
-                    int idx = n_links + i + (arbiter_rr_counters[i] * n_links);
-                    
-                    buffers[idx].deq();
-                    return buffers[idx].first();
+            interface send_flit = toGet(buffers[8 * n_links * arbiter_rr_counter
+                                            +   n_links * arbiter_rr_vc_counter
+                                            +   i]);
+            // receive a flit from somewhere
+            interface load_flit = interface Put#(Flit);
+                method Action put(Flit f);
+                    // is the flit useful?
+                    if(f.valid == 1)
+                    begin
+                        // route it to an output buffer, if not mine
+                        if (f.fin_dest != self_addr)
+                        begin
+                            // assume destination is in different tile, route to head
+                            int destIdx = headIdx;
+                            if(self_addr.L1_headID == f.fin_dest.L1_headID)
+                                // destination is in same tile
+                                // route to dest
+                                destIdx = f.fin_dest.L2_ID;
+                            
+                            int diff = destIdx ^ self_addr.L2_ID;
+                            int offset = destIdx * n_links;
+
+                            if (diff != 0)
+                                f.vc = destIdx;
+
+                            if(diff >= 4)
+                                buffers[8 * n_links * i + linkDiff2 + offset].enq(f);
+                            else if(diff >= 2)
+                                buffers[8 * n_links * i + linkDiff1 + offset].enq(f);
+                            else if(diff >= 1)
+                                buffers[8 * n_links * i + linkDiff0 + offset].enq(f);
+                            $$3
+                        end
+                        else
+                            // its mine, route it to the core
+                            buffers[8 * n_links * i].enq(f);
+                    end
                 endmethod
             endinterface
-            // receive a flit from somewhere
-            interface load_flit = toPut(buffers[i]);
         endinterface: Ifc_channel
     end
-
-    ////////// Router rules
-    // BI/ILx to OLx/BO buffers
-    rule il_to_router_rr;
-        // for each ILi / router in
-
-        // use IL by default
-        int idx = router_rr_counter;
-        if (router_rr_counter == n_links)
-            // use CoreOut
-            idx = coreOut;
-
-        Flit f = buffers[idx].first();
-        buffers[idx].deq();
-        
-        // is the flit useful?
-        if(f.valid == 1)
-            begin
-                // route it to an output buffer, if not mine
-                if (f.fin_dest != self_addr)
-                    begin
-                        // assume destination is in different tile, route to head
-                        int destIdx = headIdx;
-                        if(self_addr.L1_headID == f.fin_dest.L1_headID)
-                            // destination is in same tile
-                            // route to dest
-                            destIdx = f.fin_dest.L2_ID;
-                        
-                        int diff = destIdx ^ self_addr.L2_ID;
-                        int offset = destIdx * n_links;
-
-                        if (diff != 0)
-                            f.vc = destIdx;
-
-                        if(diff >= 4)
-                            buffers[linkDiff2 + offset].enq(f);
-                        else if(diff >= 2)
-                            buffers[linkDiff1 + offset].enq(f);
-                        else if(diff >= 1)
-                            buffers[linkDiff0 + offset].enq(f);
-                        $$3
-                    end
-                else
-                    // its mine, route it to the core
-                    buffers[coreIn].enq(f);
-            end
-    endrule
 
 endmodule: hypercube_l2;
 endpackage: hypercube_l2;
