@@ -13,6 +13,9 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
     // A butterfly switch has 4 links by default
     int link_count = 4;
     
+    int prev_diag_switch = (1 << (stage - 2)) ^ self_addr.pos;
+    int next_diag_switch = (1 << (stage - 1)) ^ self_addr.pos;
+    
     
     // buffers for:
     //       each IL    for each OL
@@ -44,32 +47,42 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
-		       	    int destIdx = 0; 
-                            // route it to an output buffer, if not mine
-                            if (f.fin_dest.l1_headID != self_addr.l1_headID)
+			    // assume destination is head
+		       	    int destIdx = 0;
+                            if (f.fin_dest.l1_headID == self_addr.l1_headID)
+			    	destIdx = f.fin_dest.l2_headID;
+			    if (destIdx < 2**(k-1))
                             begin
-                                // destination is in different tile, route to head
+                                // route to the head side
+				if (self_addr.stage != 1)
+					if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 2))))
+					// Go diagonally
+					buffers[link_count * i + 1].enq(f);
+					
+					else
+					// Go straight
+					buffers[link_count * i + 0].enq(f);					
+				else
+					if ((destIdx && (1 << (self_addr.stage - 1))) != 0)
+					// Go diagonally
+					buffers[link_count * i + 1].enq(f);					
+					else
+					// Go straight
+					buffers[link_count * i + 0].enq(f);
+					
+			    end
+			    
+			    else
+			    begin
+			    	// route away from the head
+				if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 1))))
+				// Go diagonally
+					buffers[link_count * i + 3].enq(f);					
+				else
+				// Go straight
+					buffers[link_count * i + 2].enq(f);					
+			    end						
 				
-
-			    if(self_addr.l1_headID == f.fin_dest.l1_headID)
-				begin
-                                    // destination is in same tile
-                                    // route to dest
-				    
-       	                            buffers[link_count * i].enq(f);
-         			 end
-				    
-
-				 else
-                                    // it must go outwards, to L1 routing
-                                    if (isHead)
-                                        buffers[link_count * i + 1].enq(f);
-                                    else
-                                        // Error!
-                            end
-                            else
-                                // its mine, route it to the core
-                                buffers[link_count * i].enq(f);
                         end
                     endmethod
                 endinterface
@@ -77,7 +90,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
         end
     end
     else
-    // Case: I am a L1 head router (start: 1)
+    // Case: I am in a L1 topology (start: 1)
     begin
         for(int i = 0; i < link_count; i++)
         begin
@@ -91,11 +104,43 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
-			    if(f.fin_dest.l1_headID != self_addr.l1_headID)
-       	                            buffers[link_count * i].enq(f);				    
-                            else
-                                // its mine, route it to the node for internal routing
-                                buffers[2*link_count * i].enq(f);
+		       	    int destIdx = f.fin_dest.l1_headID; 
+                            if (destIdx < 2**(k-1)) 
+                            begin
+                                // Route towards head
+				if (self_addr.stage != 1)
+					if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 2))))
+					// Go diagonally
+					buffers[link_count * i + 1].enq(f);
+					
+					else
+					// Go straight
+					buffers[link_count * i + 0].enq(f);					
+
+				else
+					if ((destIdx && (1 << (self_addr.stage - 1))) != 0)
+					// Go diagonally
+					buffers[link_count * i + 1].enq(f);					
+					
+					else
+					// Go straight
+					buffers[link_count * i + 0].enq(f);
+
+			    end
+			    
+			    else
+			    begin
+			    	// Route away from head
+				if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 1))))
+					// Go diagonally
+					buffers[link_count * i + 3].enq(f);					
+					
+				else
+					// Go straight
+					buffers[link_count * i + 2].enq(f);					
+
+			    end						
+				
                         end
                     endmethod
                 endinterface
