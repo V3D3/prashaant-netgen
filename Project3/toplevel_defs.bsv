@@ -23,6 +23,7 @@ typedef struct {
 	// Stage in the topology
 	int stage;
 	// Switch position in stage
+	int pos;
 	
 	} Butterfly_switch_addr;  
 
