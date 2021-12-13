@@ -1,8 +1,9 @@
 package chain_l2;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
 module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int link_Neg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Only one virtual channel per link, routing is simple shortest path
@@ -30,8 +31,8 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int li
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL
-    int n_buffers = link_count * link_count;
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    // int n_buffers = link_count * link_count;
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = len / 2;
