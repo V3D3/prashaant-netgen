@@ -14,7 +14,7 @@ typedef struct {
 	// Node postion within the Tile
 	int l2_ID;
 	
-	} Node_addr;  
+	} Node_addr deriving(Bits, Eq);  
 
 // Defining structure for Butterfly Switch address
 typedef struct { 
@@ -26,7 +26,7 @@ typedef struct {
 	// Switch position in stage
 	int pos;
 	
-	} Butterfly_switch_addr;  
+	} Butterfly_switch_addr deriving(Bits, Eq);  
 
 
 // Defining a structure for the flit
@@ -43,7 +43,7 @@ typedef struct {
 	
 	int vc;
 	
-	} Flit;
+	} Flit deriving(Bits, Eq);
 
 
 
@@ -67,7 +67,7 @@ endmodule
 
 
 // Interfaces for the nodes
-interface Ifc_node#(type n_links);   // Since the links are fully duplex, number of input links and output links would be the same
+interface Ifc_node#(numeric type n_links);   // Since the links are fully duplex, number of input links and output links would be the same
 
 	// The interface for the nodes are basically the set of duplex channels connecting it to other nodes. 
 	// n_links is the parametrised number of channels that the node contains.
