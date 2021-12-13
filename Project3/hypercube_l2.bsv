@@ -1,8 +1,9 @@
 package hypercube_l2;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
 module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_Diff1, int link_Diff0, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Eight virtual channels per link, routing is via flipping Most Significant Differing Bit
@@ -32,8 +33,8 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL  VCs
-    int n_buffers = link_count * link_count * 8;
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+//    int n_buffers = link_count * link_count * 8;
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     // up to n_links - 1: ILi
     
     // we have link_count buckets of size link_count * 8
@@ -47,8 +48,8 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_
     int headIdx = 0;
 
     // round robin and its incrementer, for arbiter
-    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
-    Reg#(UInt#(3)) arbiter_rr_vc_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_vc_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)
             arbiter_rr_counter <= arbiter_rr_counter + 1;
