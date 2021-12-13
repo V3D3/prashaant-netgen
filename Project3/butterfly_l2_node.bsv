@@ -27,7 +27,8 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL
-    Vector#(link_count * link_count, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    int n_buffers = link_count * link_count;
+    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = 0;
@@ -46,12 +47,15 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
     // Case: I am not a L1 headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
+
+    Vector#(n_links,Ifc_channel) temp_node_channels;	
+
     if (!isL1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel;
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
@@ -93,21 +97,21 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
                                 buffers[link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
     else
     // Case: I am a L1 head router (start: 1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
@@ -123,12 +127,13 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
        	                        buffers[link_count * i].enq(f);				    
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
 
 
+    interface node_channels = temp_node_channels;
 
 
 endmodule
