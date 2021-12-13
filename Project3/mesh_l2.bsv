@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXPos, int linkXNeg, int linkYPos, int linkYNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link_XPos, int link_XNeg, int link_YPos, int link_YNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Only one virtual channel per link, routing is X-Y
     // n_links: 2 (corner) / 3 (edge) / 4 (internal)
     // Core will have access to one input and one output buffer
@@ -12,6 +12,11 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     int link_count = n_links + 1;
     if (isHead)
         link_count = link_count + 1;
+
+    int linkXPos = link_XPos;
+    int linkXNeg = link_XNeg;
+    int linkYPos = link_YPos;
+    int linkYNeg = link_YNeg;
 
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
@@ -30,7 +35,9 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //         each IL       for each OL
-    Vector#(link_count * link_count, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+
+    int n_buffers = link_count * link_count;
+    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = (rows / 2) * rows + (col / 2);
@@ -53,7 +60,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)
-            arbiter_rr_counter <= arbiter_rr_counter + 1
+            arbiter_rr_counter <= arbiter_rr_counter + 1;
         else
             arbiter_rr_counter <= 0;
     endrule
@@ -62,16 +69,18 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
     // Case: I am not a headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
+    Vector#(n_links,Ifc_channel) temp_node_channels;	
+
     if (!isL1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
@@ -112,16 +121,16 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                                 buffers[link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
     else
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel;
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
@@ -150,10 +159,11 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int linkXP
                                 buffers[link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
 
-endmodule: mesh_l2;
-endpackage: mesh_l2;
+    interface node_channels = temp_node_channels;
+endmodule: mesh_l2
+endpackage: mesh_l2
