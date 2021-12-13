@@ -1,11 +1,11 @@
 package butterfly_l2_node;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
-
-module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(Ifc_node#(n_links));
+module butterfly_l2_node#(int n_links, int k, Ifc_core core, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(n_links));
 
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
@@ -27,15 +27,15 @@ module butterfly_l2_node#(int k, Ifc_core core, Node_addr self_addr, Bool isL1)(
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL
-    int n_buffers = link_count * link_count;
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+//    int n_buffers = link_count * link_count;
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = 0;
 
     // my coord: my L2_ID
 
-    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)                      
             arbiter_rr_counter <= arbiter_rr_counter + 1;
