@@ -1,4 +1,4 @@
-package common_defs;
+package toplevel_defs;
 
 import GetPut ::*;
 import FIFO ::*;
@@ -38,7 +38,7 @@ typedef struct {
 	// Final Destination address
 	Node_addr fin_dest;
 	// Payload
-	Bit#(`payload_size) payload;
+	Bit#(32) payload;
 	
 	int vc;
 	
@@ -55,22 +55,18 @@ interface Ifc_core;
 endinterface
 
 
-This part is to be done by the end user - simulator in our case
+// This part is to be done by the end user - simulator in our case
 // Module for generating and core flits at bottom level nodes
-module mkCore #(num_(Ifc_core);
+/*
+module mkCore (Ifc_core);
 
-	// LFSR for random patterns 
-	LFSR#( Bit#(8) ) lfsr <- mkLFSR_8 rand ;	
-
-	
-	<<<< insert flit generation code >>>>>
 
 endmodule
-
+*/
 
 
 // Interfaces for the nodes
-interface Ifc_node#(n_links);   // Since the links are fully duplex, number of input links and output links would be the same
+interface Ifc_node#(type n_links);   // Since the links are fully duplex, number of input links and output links would be the same
 
 	// The interface for the nodes are basically the set of duplex channels connecting it to other nodes. 
 	// n_links is the parametrised number of channels that the node contains.
@@ -87,8 +83,8 @@ interface Ifc_channel;
 	interface Put#(Flit) load_flit;
 	// Output channel - sends flits from the arbiter
 	interface Get#(Flit) send_flit; 
-	
-endpackage
+
+endinterface	
 
 
 instance Connectable #(Ifc_channel,
@@ -104,4 +100,4 @@ instance Connectable #(Ifc_channel,
    endmodule: mkConnection
 endinstance: Connectable
 
-//
+endpackage
