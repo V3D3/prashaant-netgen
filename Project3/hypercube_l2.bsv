@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDiff1, int linkDiff0, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_Diff1, int link_Diff0, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Eight virtual channels per link, routing is via flipping Most Significant Differing Bit
     // n_links: 3 (all)
     // Core will have access to one input and one output buffer
@@ -18,6 +18,9 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDi
     // this is a head node: 0: core, 1: headrouter, 2: node and so on
     // this is a head router (L1): 0: my node, 1: headnode, 2: headnode and so on
     int nodelink_start = 1;
+    int linkDiff2 = link_Diff2;
+    int linkDiff1 = link_Diff1;
+    int linkDiff0 = link_Diff0;
     if (isHead)
     begin
         nodelink_start = 2;
@@ -29,7 +32,8 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDi
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL  VCs
-    Vector#(link_count * link_count * 8, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    int n_buffers = link_count * link_count * 8;
+    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     // up to n_links - 1: ILi
     
     // we have link_count buckets of size link_count * 8
@@ -63,18 +67,20 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDi
     // Case: I am not a headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
+    Vector#(n_links,Ifc_channel) temp_node_channels;	
+
     if (!isL1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[8 * link_count * arbiter_rr_counter
                                                 +   link_count * arbiter_rr_vc_counter
                                                 +   i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
@@ -113,23 +119,23 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDi
                                 buffers[8 * link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
     else
     // Case: I am a head router (L1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[8 * link_count * arbiter_rr_counter
                                                 +   link_count * arbiter_rr_vc_counter
                                                 +   i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
@@ -153,10 +159,12 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int linkDiff2, int linkDi
                                 buffers[8 * link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
 
-endmodule: hypercube_l2;
-endpackage: hypercube_l2;
+    interface node_channels = temp_node_channels;
+
+endmodule: hypercube_l2
+endpackage: hypercube_l2
