@@ -3,7 +3,8 @@ package toplevel_defs;
 import GetPut ::*;
 import FIFO ::*;
 import ClientServer ::*;
-
+import Vector ::*;
+import Connectable ::*;
 
 // Defining structure for Node address
 typedef struct { 
@@ -32,7 +33,7 @@ typedef struct {
 typedef struct { 
 
 	// Is this flit valid?
-	Bit valid;
+	Bit#(1) valid;
 	// Source address
 	Node_addr src;
 	// Final Destination address
