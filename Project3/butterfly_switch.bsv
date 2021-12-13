@@ -1,11 +1,12 @@
 package butterfly_switch;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
 
-module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_node#(n_links));
+module butterfly_switch#(int n_links, int k, Butterfly_switch_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(n_links));
 
         // In case of a L2 butterfly topology, Channel 0,1 are towards the head, and 2,3 are away from head
 	// Links 0 and 2 are direct links, while 1 and 3 are diagonal links
@@ -13,18 +14,18 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
     // A butterfly switch has 4 links by default
     int link_count = 4;
     
-    int prev_diag_switch = (1 << (stage - 2)) ^ self_addr.pos;
-    int next_diag_switch = (1 << (stage - 1)) ^ self_addr.pos;
+    int prev_diag_switch = (1 << (self_addr.stage - 2)) ^ self_addr.pos;
+    int next_diag_switch = (1 << (self_addr.stage - 1)) ^ self_addr.pos;
     
     
     // buffers for:
     //       each IL    for each OL
-    int n_buffers = link_count * link_count;
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+//    int n_buffers = link_count * link_count;
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // my coord: my L2_ID
 
-    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)                      
             arbiter_rr_counter <= arbiter_rr_counter + 1;
@@ -54,12 +55,12 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
 			    // assume destination is head
 		       	    int destIdx = 0;
                             if (f.fin_dest.l1_headID == self_addr.l1_headID)
-			    	destIdx = f.fin_dest.l2_headID;
+			    	destIdx = f.fin_dest.l2_ID;
 			    if (destIdx < 2**(k-1))
                             begin
                                 // route to the head side
 				if (self_addr.stage != 1)
-					if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 2))))
+					if ((destIdx & (1 << (self_addr.stage - 1))) != (self_addr.pos & (1 << (self_addr.stage - 2))))
 					// Go diagonally
 					buffers[link_count * i + 1].enq(f);
 					
@@ -67,7 +68,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
 					// Go straight
 					buffers[link_count * i + 0].enq(f);					
 				else
-					if ((destIdx && (1 << (self_addr.stage - 1))) != 0)
+					if ((destIdx & (1 << (self_addr.stage - 1))) != 0)
 					// Go diagonally
 					buffers[link_count * i + 1].enq(f);					
 					else
@@ -79,7 +80,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
 			    else
 			    begin
 			    	// route away from the head
-				if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 1))))
+				if ((destIdx & (1 << (self_addr.stage - 1))) != (self_addr.pos & (1 << (self_addr.stage - 1))))
 				// Go diagonally
 					buffers[link_count * i + 3].enq(f);					
 				else
@@ -113,7 +114,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
                             begin
                                 // Route towards head
 				if (self_addr.stage != 1)
-					if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 2))))
+					if ((destIdx & (1 << (self_addr.stage - 1))) != (self_addr.pos & (1 << (self_addr.stage - 2))))
 					// Go diagonally
 					buffers[link_count * i + 1].enq(f);
 					
@@ -122,7 +123,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
 					buffers[link_count * i + 0].enq(f);					
 
 				else
-					if ((destIdx && (1 << (self_addr.stage - 1))) != 0)
+					if ((destIdx & (1 << (self_addr.stage - 1))) != 0)
 					// Go diagonally
 					buffers[link_count * i + 1].enq(f);					
 					
@@ -135,7 +136,7 @@ module butterfly_switch#(int k, Bool isL1, Butterfly_switch_addr self_addr)(Ifc_
 			    else
 			    begin
 			    	// Route away from head
-				if ((destIdx && (1 << (self_addr.stage - 1))) != (self_addr.pos && (1 << (self_addr.stage - 1))))
+				if ((destIdx & (1 << (self_addr.stage - 1))) != (self_addr.pos & (1 << (self_addr.stage - 1))))
 					// Go diagonally
 					buffers[link_count * i + 3].enq(f);					
 					
