@@ -4,7 +4,7 @@ import Vectors::*;
 import toplevel_defs ::*;
 import GetPut::*;
 
-module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int linkNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int link_Neg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Only one virtual channel per link, routing is simple shortest path
     // n_links: 1 (edge) / 2 (internal)
     // Core will have access to one input and one output buffer
@@ -13,6 +13,8 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
     if (isHead)
         link_count = link_count + 1;
 
+    int linkPos = link_Pos;
+    int linkNeg = link_Neg;
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
     // this is a head node: 0: core, 1: headrouter, 2: node and so on
@@ -28,7 +30,8 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL
-    Vector#(link_count * link_count, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    int n_buffers = link_count * link_count;
+    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = len / 2;
@@ -47,60 +50,63 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
     // Case: I am not a headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
+
+    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    
     if (!isL1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
-                // send flit from me to others
-                interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
-                // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
-                    method Action put(Flit f);
-                        // is the flit useful?
-                        if(f.valid == 1)
-                        begin
-                            // route it to an output buffer, if not mine
-                            if (f.fin_dest != self_addr)
-                            begin
-                                // assume destination is in different tile, route to head
-                                int destIdx = headIdx;
-                                if(self_addr.l1_headID == f.fin_dest.l1_headID)
-                                    // destination is in same tile
-                                    // route to dest
-                                    destIdx = f.fin_dest.l2_ID;
+            temp_node_channels[i] = interface Ifc_channel
+                		// send flit from me to others
+                		interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
+                		// receive a flit from somewhere
+                		interface load_flit = interface Put#(Flit)
+                    					method Action put(Flit f);
+                        				// is the flit useful?
+                        					if(f.valid == 1)
+                        					begin
+                            						// route it to an output buffer, if not mine
+                            						if (f.fin_dest != self_addr)
+                            						begin
+                                						// assume destination is in different tile, route to head
+                                						int destIdx = headIdx;
+                                						if(self_addr.l1_headID == f.fin_dest.l1_headID)
+                                    						// destination is in same tile
+                                    						// route to dest
+                                    							destIdx = f.fin_dest.l2_ID;
                                 
-                                int diff = destIdx - self_addr.l2_ID;
+						                                int diff = destIdx - self_addr.l2_ID;
 
-                                if(diff > 0)
-                                    buffers[link_count * i + linkPos].enq(f);
-                                else if(diff < 0)
-                                    buffers[link_count * i + linkNeg].enq(f);
-                                else
-                                    // it must go outwards, to L1 routing
-                                    if (isHead)
-                                        buffers[link_count * i + 1].enq(f);
-                                    else
-                                        // Error!
-                                        $display("error: chain_l2.bsv:86");
-                            end
-                            else
-                                // its mine, route it to the core
-                                buffers[link_count * i].enq(f);
-                        end
-                    endmethod
-                endinterface
-            endinterface: Ifc_channel
+                                						if(diff > 0)
+                                    							buffers[link_count * i + linkPos].enq(f);
+                                						else if(diff < 0)
+                                    							buffers[link_count * i + linkNeg].enq(f);
+                                						else
+                                    							// it must go outwards, to L1 routing
+                                    							if (isHead)
+                                        							buffers[link_count * i + 1].enq(f);
+                                    							else
+                                        							// Error!
+                                        							$display("error: chain_l2.bsv:86");
+                            						end
+                            						else
+                                						// its mine, route it to the core
+                                						buffers[link_count * i].enq(f);
+                        					end
+                    					endmethod
+                					endinterface;
+            			endinterface;
         end
     end
     else
     // Case: I am a head router (start: 1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel;
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
@@ -110,7 +116,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                         if(f.valid == 1)
                         begin
                             // route it to an output buffer, if not my tile's
-                            int diff = f.fin_dest.l1_headID - self_addr.11_headID;
+                            int diff = f.fin_dest.l1_headID - self_addr.l1_headID;
                             if(diff > 0)
                                 buffers[link_count * i + linkPos].enq(f);
                             else if(diff < 0)
@@ -120,9 +126,12 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int linkPos, int lin
                                 buffers[link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface;
         end
     end
-endmodule: chain_l2;
-endpackage: chain_l2;
+
+    interface node_channels = temp_node_channels;
+
+endmodule: chain_l2
+endpackage: chain_l2
