@@ -38,7 +38,8 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL*2 (2 VCs for ring)
-    Vector#(link_count * link_count*2, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    int n_buffers = link_count * link_count*2;
+    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = 0;
@@ -57,16 +58,19 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
     // Case: I am not a L1 headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
+
+    Vector#(n_links,Ifc_channel) temp_node_channels;	
+
     if (!isL1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i= i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
@@ -78,14 +82,14 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                 int destIdx = headIdx;
                                 if(self_addr.l1_headID == f.fin_dest.l1_headID)
 					// destination is in the same tile
-					destIdx = f.fin_dest.l2_ID
+					destIdx = f.fin_dest.l2_ID;
 				if(self_addr.l2_ID != destIdx)
 				begin
                                     // destination is in same tile
                                     // route to dest
                                     destIdx = f.fin_dest.l2_ID;
 				    
-	                            if(f.vc = 1)
+	                            if(f.vc == 1)
         	                            buffers[2*link_count * i + linkPos + ((i==1)?2:1)].enq(f);
                 	            else
 				    begin
@@ -112,28 +116,28 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                 buffers[2*link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface;
         end
     end
     else
     // Case: I am a L1 head router (start: 1)
     begin
-        for(int i = 0; i < link_count; i++)
+        for(int i = 0; i < link_count; i=i+1)
         begin
             // attach to input and output channels
-            node_channels[i] = interface Ifc_channel;
+            temp_node_channels[i] = interface Ifc_channel
                 // send flit from me to others
                 interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
                 // receive a flit from somewhere
-                interface load_flit = interface Put#(Flit);
+                interface load_flit = interface Put#(Flit)
                     method Action put(Flit f);
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
 			    if(f.fin_dest.l1_headID != self_addr.l1_headID)
 			    begin
-	                            if(f.vc = 1)
+	                            if(f.vc == 1)
         	                            buffers[2*link_count * i + linkPos + ((i==1)?2:1)].enq(f);
                 	            else
 				    begin
@@ -152,13 +156,14 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
                                 buffers[2*link_count * i].enq(f);
                         end
                     endmethod
-                endinterface
-            endinterface: Ifc_channel
+                endinterface;
+            endinterface; // Ifc_channel
         end
     end
+
+    interface node_channels = temp_node_channels;
 
 endmodule
 
 endpackage
-
 
