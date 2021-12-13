@@ -1,11 +1,12 @@
 package ring_l2;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
 
-module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_links));
+module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr,Bool isHead, Bool isL1)(Ifc_node#(n_links));
 
 	/*
 	 Date line algorithm is to be implemented.
@@ -38,15 +39,15 @@ module ring_l2#(int n_links, Ifc_core core, Node_addr self_addr)(Ifc_node#(n_lin
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL*2 (2 VCs for ring)
-    int n_buffers = link_count * link_count*2;
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+//    int n_buffers = link_count * link_count*2;
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
 
     // the coords of head node in my topology
     int headIdx = 0;
 
     // my coord: my L2_ID
 
-    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count*2 - 1)                      // *2 indicates VCs
             arbiter_rr_counter <= arbiter_rr_counter + 1;
