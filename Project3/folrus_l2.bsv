@@ -1,8 +1,9 @@
 package folrus_l2;
 
-import Vectors::*;
+import Vector::*;
 import toplevel_defs ::*;
 import GetPut::*;
+import FIFO::*;
 
 module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link_XPos, int link_XNeg, int link_YPos, int link_YNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
     // Two virtual channels per link, routing is X (for locating ring, shortest arc), then Date-line in Y
@@ -35,8 +36,8 @@ module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL  VCs
-    int n_buffers = link_count * link_count * 2; 
-    Vector#(n_buffers, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+//    int n_buffers = link_count * link_count * 2; 
+    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     
     // we have link_count buckets of size link_count * 2
     // one bucket per IL
@@ -63,8 +64,8 @@ module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link
     end
 
     // round robin and its incrementer, for arbiter
-    Reg#(UInt#(3))  arbiter_rr_counter <- mkReg(0);
-    Reg#(Bit)       arbiter_rr_vc_counter <- mkReg(0);
+    Reg#(int)  arbiter_rr_counter <- mkReg(0);
+    Reg#(int)       arbiter_rr_vc_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)
             arbiter_rr_counter <= arbiter_rr_counter + 1;
@@ -82,7 +83,7 @@ module folrus_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link
 
     Vector#(n_links,Ifc_channel) temp_node_channels;	
 
-    if (!isl1)
+    if (!isL1)
     begin
         for(int i = 0; i < link_count; i=i+1)
         begin
