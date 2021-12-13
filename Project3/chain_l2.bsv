@@ -39,7 +39,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int li
 
     // my coord: my l2_ID
 
-    Reg#(UInt#(3)) arbiter_rr_counter <- mkReg(0);
+    Reg#(int) arbiter_rr_counter <- mkReg(0);
     rule rr_arbiter_incr;
         if (arbiter_rr_counter < link_count - 1)
             arbiter_rr_counter <= arbiter_rr_counter + 1;
