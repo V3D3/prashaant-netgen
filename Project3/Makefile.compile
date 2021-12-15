@@ -42,7 +42,7 @@ generate_verilog:
 	@mkdir -p $(BSVBUILDDIR); 
 	@mkdir -p $(VERILOGDIR); 
 	@$(shell if [ ! -d $(BSVBUILDDIR)/common_bsv ]; then git clone --recursive https://gitlab.com/shaktiproject/common_bsv.git $(BSVBUILDDIR)/common_bsv; fi)
-	@bsc -u -remove-dollar -verilog -elab -vdir $(VERILOGDIR) -bdir $(BSVBUILDDIR) -info-dir $(BSVBUILDDIR)\
+	@bsc -u -remove-dollar -verilog -elab -vdir $(VERILOGDIR) -bdir $(BSVBUILDDIR) -info-dir $(BSVBUILDDIR) -steps-max-intervals 20 -steps-warn-interval 1000000\
   -keep-fires -check-assert  $(define_macros) -D VERBOSITY=0 -D verilog=True $(BSVCOMPILEOPTS)\
   -p $(BSVINCDIR) -g $(TOP_MODULE) $(TOP_DIR)/$(TOP_FILE)  || (echo "BSC COMPILE ERROR"; exit 1) 
 

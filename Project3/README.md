@@ -10,7 +10,8 @@ Usage:
     ...
     <Topology n>, <Dimension 1 of Tn>, <Dimension 2 of Tn><EOF>
 3. Run generator.py.
-4. Run the `runbsvcode` file for simulating.
+4. In the file `Makefile.simulate`, change line `39`'s last include to point to the Verilog directory on your machine.
+5. Run the `runbsvcode` file for simulating.
 
 The team members consider the following as their percentages of contribution. <br>
 50% Shashank (EE19B118) <br>
@@ -28,6 +29,8 @@ Scripts
 - utilizes `<topology>_l2.bsv` modules, instantiating based on use as L1, L2 or L2Head nodes.
 - robust, warns of any missing files
 
+`runbsvcode`<br>
+**requires** &nbsp;Bluespec, Verilator, Python, CocoTb, as set up for CS6230.
 
 ---
 Acknowledgements
@@ -37,4 +40,4 @@ The following sources were consulted while writing the code:
 - Bluespec Reference Guide (Bluespec Inc.)
 
 The following sources constitute part of the codebase:
-- Source files (`Makefile`, `runbsvcode`, etc) for simulation provided by Prof. Kamakoti (CSE Dept., IITM)
+- Source files (`Makefile.*`, `runbsvcode`, etc) for simulation provided by Prof. Kamakoti (CSE Dept., IITM)

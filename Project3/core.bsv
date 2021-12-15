@@ -36,6 +36,7 @@ module mkCore(Ifc_core);
   // The following action occurs at random time (25% probability now)
   rule action2 (lfsr.value() > 192);
       // Modify this so that it generates random flits with the constraints set by the actual network
+      $display("Generated a flit");
       generated_flit.enq( Flit {valid : 1, src : Node_addr {l1_headID : 0, l2_ID : 0}, fin_dest : Node_addr {l1_headID : 1, l2_ID : 1}, payload : 0, vc: 0 });  
   endrule
   

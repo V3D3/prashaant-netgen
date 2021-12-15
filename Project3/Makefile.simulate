@@ -27,11 +27,16 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ###############################################################################
 
+include Makefile.inc
+
+SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
+EXTRA-ARGS += --trace --trace-structs
+
 COMPILE_ARGS += -O3 --x-assign fast --x-initial fast \
-  --noassert --bbox-sys -Wno-STMTDLY -Wno-UNOPTFLAT -Wno-WIDTH \
-  -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY --autoflush  --threads 1 \
+  --noassert --bbox-sys -Wno-STMTDLY -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-WIDTH \
+  -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY --autoflush  --threads 1 -I$(TOP_DIR)/verilog/ -I/media/hdd/work/cs6230-bluespec/bsc/src/Verilog \
   -DBSV_RESET_FIFO_HEAD -DBSV_RESET_FIFO_ARRAY --output-split 20000 --output-split-ctrace 10000  --timescale 1ns/1ps
   
 PWD=$(shell pwd)

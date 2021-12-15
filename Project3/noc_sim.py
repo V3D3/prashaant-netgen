@@ -24,23 +24,6 @@ def noc_sim(dut):  #14
     yield clkedge
     clkedge = RisingEdge(dut.CLK)
     dut.RST_N <= 1
-    yield clkedge #Step 0
-    yield clkedge #Step 1
-    yield clkedge #Step 2
-    yield clkedge #Step 3
-    yield clkedge #Step 4
-    yield clkedge #Step 5
-    yield clkedge #Step 6
-    yield clkedge #Step 7
-    yield clkedge #Step 8
-    yield clkedge #Step 9
-    yield clkedge #Step 10
-    yield clkedge #Step 11
-    yield clkedge #Step 12
-    yield clkedge #Step 13
-    yield clkedge #Step 14
-    yield clkedge #Step 15
-    yield clkedge #Step 16
-    yield clkedge #Step 17
-    yield clkedge #Step 18
 
+    for i in range(5000):
+        yield clkedge

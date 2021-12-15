@@ -887,8 +887,13 @@ for node in G.nodes:
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
         nodeIntId = nodeIntId[0] * L1_n + nodeIntId[1]
         OUT += f'        Ifc_node#({ec}) {nodeId} <- mesh_l2({ec}, Node_addr {{l1_headID: {nodeIntId}, l2_ID: 999}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n'
-    # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
-    #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
+    elif tc == 'B':
+        if(G.nodes[node]['exdata'].isSwitch):
+            nodeComps = [int(i) for i in node.split(DELIMITER)]
+            nodeIntId = nodeComps[0] * (L1_n / 2) + nodeComps[1]
+            OUT += f'Ifc_node {nodeId} <- butterfly_switch({int(log2(2 * L1_n))}, Butterfly_switch_addr {{l1_headID: {int(nodeIntId) + 2 * L1_n}, stage: {nodeComps[0]}, pos: {nodeComps[1]}}}, True);\n'
+        else:
+            OUT += f'Ifc_node {nodeId} <- butterfly_l2_node({ec}, {int(log2(2 * L1_n))}, Node_addr {{l1_headID: {int(node)}, l2_ID: 999}}, False, True);\n'
     elif tc == 'F':
         headIdMode = 1
         nodeIntId = [int(i) for i in node.split(DELIMITER)]
@@ -924,10 +929,13 @@ for head in innerTopologies:
 
 # Add L2 nodes and their edges
 for head in innerTopologies:
-    
     T = innerTopologies[head]
     G = T.topoGraph
     tc = T.topoClass
+
+    if(outerTopology.topoGraph.nodes[head]['exdata'].isSwitch):
+        continue
+
     OUT += f'\n\n // L2 Generation : Class: {tc}, HeadID: {head}\n\n'
 
     headIntId = 0
@@ -953,8 +961,13 @@ for head in innerTopologies:
             nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]
             OUT += f'        Ifc_node#({ec}) {nodeId} <- mesh_l2({ec}, Node_addr {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, {G.nodes[node]["exdata"].isHead}, False);\n'
-        # elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
-        #     OUT += f'Ifc_node {nodeId} <- butterfly_l2({}, {{l1_headID: {}, l2_ID: {}}}, {L1_n}, {L1_m}, 1, 2, 3, 4, False, True);\n''
+        elif tc == 'B': # TODO: fix Butterfly (also gens for switches currently)
+            if(G.nodes[node]['exdata'].isSwitch):
+                nodeComps = [int(i) for i in node.split(DELIMITER)]
+                nodeIntId = nodeComps[0] * (T.topoParams[0] / 2) + nodeComps[1]
+                OUT += f'Ifc_node {nodeId} <- butterfly_switch({int(log2(2 * T.topoParams[0]))}, Butterfly_switch_addr {{l1_headID: {int(headIntId)}, stage: {nodeComps[0]}, pos: {nodeComps[1]}}}, False);\n'
+            else:
+                OUT += f'Ifc_node {nodeId} <- butterfly_l2_node({ec}, {int(log2(2 * T.topoParams[0]))}, Node_addr {{l1_headID: {int(headIntId)}, l2_ID: {int(node)}}}, {G.nodes[node]["exdata"].isHead}, False);\n'
         elif tc == 'F':
             nodeIntId = [int(i) for i in nodeIntId.split(DELIMITER)]
             nodeIntId = nodeIntId[0] * T.topoParams[0] + nodeIntId[1]

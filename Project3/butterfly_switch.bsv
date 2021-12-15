@@ -6,7 +6,7 @@ import GetPut::*;
 import FIFO::*;
 
 
-module butterfly_switch#(int n_links, int k, Butterfly_switch_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(n_links));
+module butterfly_switch#(int k, Butterfly_switch_addr self_addr, Bool isL1)(Ifc_node#(4));
 
         // In case of a L2 butterfly topology, Channel 0,1 are towards the head, and 2,3 are away from head
 	// Links 0 and 2 are direct links, while 1 and 3 are diagonal links
@@ -36,7 +36,7 @@ module butterfly_switch#(int n_links, int k, Butterfly_switch_addr self_addr, Bo
     // Link Rules
     // Case: I am not a L1 switch
 
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(4, Ifc_channel) temp_node_channels;	
 
     if (!isL1)
     begin

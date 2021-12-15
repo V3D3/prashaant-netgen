@@ -5,24 +5,12 @@ import toplevel_defs ::*;
 import GetPut::*;
 import FIFO::*;
 
-module butterfly_l2_node#(int n_links, int k, Ifc_core core, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(n_links));
+module butterfly_l2_node#(int link_count, int k, Node_addr self_addr, Bool isHead, Bool isL1) (Ifc_node#(link_count));
 
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
     // this is a head node: 0: core, 1: headrouter, 2: node and so on
     // this is a head router (L1): 0: my node, 1: other headnode, 2: other headnode and so on
-    int link_count = n_links + 1;
-
-    if (isHead)
-        link_count = link_count + 1;
-
-    int nodelink_start = 1;
-    
-    if (isHead)
-    begin
-        nodelink_start = 2;
-    end
-    
     
     // buffers for:
     // (core is treated as an IL/OL, it is at 0)
@@ -48,7 +36,7 @@ module butterfly_l2_node#(int n_links, int k, Ifc_core core, Node_addr self_addr
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
 
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(link_count,Ifc_channel) temp_node_channels;	
 
     if (!isL1)
     begin
