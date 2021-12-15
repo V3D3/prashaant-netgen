@@ -150,7 +150,8 @@ def chain_gen(n, id):
       nextID = Node.generateID(((i+1) == int(n/2)), id, thisClass, str(i+1))
 
       # Add an undirected link (nx.Graph() is undirected)
-      thisGraph.add_edge(myID, nextID, src=1, dest=2)
+      chandict = {f'chan{myID}': 1, f'chan{nextID}': 2}
+      thisGraph.add_edge(myID, nextID, **chandict)
 
   # Add this topology to the innerTopologies dict
   innerTopologies[id] = thisTopology
@@ -182,7 +183,8 @@ def ring_gen(n, id):
     # Set head in topology object, as latter node
     thisTopology.headID = node2.id
     # Link them
-    thisGraph.add_edge(node1.id, node2.id, src=1, dest=2)
+    chandict = {f'chan{node1.id}': 1, f'chan{node2.id}': 2}
+    thisGraph.add_edge(node1.id, node2.id, **chandict)
 
   # Non trivial case
   else :
@@ -199,11 +201,16 @@ def ring_gen(n, id):
     for i in range(1, n-1):
       myID = Node.generateID(False, id, thisClass, str(i))
       nextID = Node.generateID(False, id, thisClass, str(i + 1))
-      thisGraph.add_edge(myID, nextID, src=1, dest=2)
+      chandict = {f'chan{myID}': 1, f'chan{nextID}': 2}
+      thisGraph.add_edge(myID, nextID, **chandict)
 
     # Adding links to head
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(n-1)), src=1, dest=2)
-    thisGraph.add_edge(headnode.id, Node.generateID(False, id, thisClass, str(1)), src=2, dest=1)
+    destID1 = Node.generateID(False, id, thisClass, str(n-1))
+    destID2 = Node.generateID(False, id, thisClass, str(1))
+    chandict = {f'chan{headnode.id}': 1, f'chan{destID1}': 2}
+    chandict2 = {f'chan{headnode.id}': 2, f'chan{destID2}': 1}
+    thisGraph.add_edge(headnode.id, destID1, **chandict)
+    thisGraph.add_edge(headnode.id, destID2, **chandict2)
 
   # Add this topology to inner topologies dict
   innerTopologies[id] = thisTopology
@@ -231,9 +238,12 @@ def hypercube_gen(id):
     for i in range(8):
       # Edges are made by inverting 1 bit in each position
       # 3 edges for our 3d hypercube
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id, src=3, dest=3)
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id, src=2, dest=2)
-      thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id, src=1, dest=1)
+      cd1 = {f'chan{nodes[i].id}': 3, f'chan{nodes[i^1].id}': 3}
+      cd2 = {f'chan{nodes[i].id}': 2, f'chan{nodes[i^2].id}': 2}
+      cd3 = {f'chan{nodes[i].id}': 1, f'chan{nodes[i^4].id}': 1}
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 1].id, **cd1)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 2].id, **cd2)
+      thisGraph.add_edge(nodes[i].id, nodes[i ^ 4].id, **cd3)
 
     # Add inner topology to dict
     innerTopologies[id] = thisTopology
@@ -296,7 +306,8 @@ def mesh_gen(n, m, id):
           src = 4
           dest = 3
       # Add edge between src and dest
-      thisGraph.add_edge(srcID, destID, src=src, dest=dest)
+      cd = {f'chan{srcID}': src, f'chan{destID}': dest}
+      thisGraph.add_edge(srcID, destID, **cd)
 
     # Add edges
     for i in range(n):
@@ -544,7 +555,7 @@ def ring_head_gen(n):
     thisGraph.add_node('1', exdata=node1)
 
     # Add edge between them
-    thisGraph.add_edge('0', '1', src=1, dest=2)
+    thisGraph.add_edge('0', '1', chan0=1, chan1=2)
 
   # Non-trivial case
   else :
@@ -557,7 +568,8 @@ def ring_head_gen(n):
 
     # Adding links
     for i in range(n):
-      thisGraph.add_edge(str(i), str((i + 1) % n), src=1, dest=2)
+      cd = {f'chan{str(i)}': 1, f'chan{str((i + 1) % n)}': 2}
+      thisGraph.add_edge(str(i), str((i + 1) % n), **cd)
 
   return thisTopology
 
@@ -578,7 +590,8 @@ def chain_head_gen(n):
 
     # Add links
     for i in range(0, n-1):
-      thisGraph.add_edge(str(i), str(i+1), src=1, dest=2)
+      cd = {f'chan{i}': 1, f'chan{i+1}': 2}
+      thisGraph.add_edge(str(i), str(i+1), **cd)
 
   else:
     # Sanity check
@@ -604,9 +617,12 @@ def hypercube_head_gen():
   
   # Add links
   for i in range(n):
-    thisGraph.add_edge(str(i), str(i ^ 1), src=3, dest=3)
-    thisGraph.add_edge(str(i), str(i ^ 2), src=2, dest=2)
-    thisGraph.add_edge(str(i), str(i ^ 4), src=1, dest=1)
+    cd = {f'chan{i}': 3, f'chan{i^1}': 3}
+    cd2 = {f'chan{i}': 2, f'chan{i^2}': 2}
+    cd3 = {f'chan{i}': 1, f'chan{i^4}': 1}
+    thisGraph.add_edge(str(i), str(i ^ 1), **cd)
+    thisGraph.add_edge(str(i), str(i ^ 2), **cd2)
+    thisGraph.add_edge(str(i), str(i ^ 4), **cd3)
 
   return thisTopology
 
@@ -657,7 +673,9 @@ def mesh_head_gen(n,m):
     else:
         src = 4
         dest = 3
-    thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest), src=src, dest=dest)
+    
+    cd = {f'chan{genID(isrc, jsrc)}': src, f'chan{genID(idest, jdest)}': dest}
+    thisGraph.add_edge(genID(isrc, jsrc), genID(idest, jdest), **cd)
 
   # Add edges
   for i in range(n):
@@ -770,7 +788,8 @@ def folded_torus_head_gen(n,m):
     else:
         src = 4
         dest = 3
-    thisGraph.add_edge(srcID, destID, src=src, dest=dest)
+    cd = {f'chan{srcID}': src, f'chan{destID}': dest}
+    thisGraph.add_edge(srcID, destID, **cd)
 
   # Add edges in columns
   for j in range(m):
@@ -819,8 +838,8 @@ elif L1_network_type == "H":
   outerTopology = hypercube_head_gen()
 
 def mkEdge(G, edge, outer=False):
-    src = edge[2]["src"]
-    dest = edge[2]["dest"]
+    src = edge[2]["chan" + edge[0]]
+    dest = edge[2]["chan" + edge[1]]
     if (G.nodes[edge[0]]['exdata'].isHead) and (not outer):
         src += 1
     if (G.nodes[edge[1]]['exdata'].isHead) and (not outer):
@@ -848,8 +867,11 @@ def print_step_info(index):
 OUT += print_step_info(1)
 
 # Preprocessing: cacheing the current number of edges
+outerMaxEdges = 0
 for node in G.nodes:
-    G.nodes[node]['exdata'].maxEdges = len(G.edges(node))
+    outerMaxEdges = max(outerMaxEdges, len(G.edges(node)))
+for node in G.nodes:
+    G.nodes[node]['exdata'].maxEdges = outerMaxEdges
 
 headIdMode = 0
 for node in G.nodes:
@@ -894,8 +916,11 @@ OUT += print_step_info(3)
 # Preprocessing: cacheing the current number of edges
 for head in innerTopologies:
     G = innerTopologies[head].topoGraph
+    currMax = 0
     for node in innerTopologies[head].topoGraph.nodes:
-        G.nodes[node]['exdata'].maxEdges = len(G.edges(node))
+        currMax = max(currMax, len(G.edges(node)))
+    for node in innerTopologies[head].topoGraph.nodes:
+        G.nodes[node]['exdata'].maxEdges = currMax
 
 # Add L2 nodes and their edges
 for head in innerTopologies:
