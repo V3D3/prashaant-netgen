@@ -25,10 +25,6 @@ endinstance: Connectable
 module mkA(Ifc_channel);
 	FIFO#(Data) myfifo <- mkFIFO;
 
-	rule mygen;
-		myfifo.enq(Data {payload: 123});
-	endrule
-
 	interface send_flit = toGet(myfifo);
 	interface load_flit = interface Put#(Data);
 		method Action put(Data d);
@@ -48,7 +44,6 @@ module mkB(Ifc_channel);
 	interface send_flit = toGet(myfifo);
 	interface load_flit = interface Put#(Data);
 		method Action put(Data d);
-			myfifo.enq(d);
 			$display("B got a flit");
 		endmethod
 	endinterface;
