@@ -1,0 +1,37 @@
+
+# Author: Prof. V. Kamakoti                      #
+# Department of Computer Science and Engineering #
+# IIT Madras - Generated on 22 Aug 2021          #
+
+# This is a single command file to compile      #
+# and simulate BSV files using verilator       #
+###############################################
+
+## Step 1:
+### You need to activate python environment using "pyenv activate py36"
+### At end can be deactivated by the command "source deactivate"
+
+## Step 2:
+### Edit the Makefile.inc to reflect the following
+### TOP_DIR: The Ddirectory containing the .bsv file
+### TOP_FILE: The Name of the file that contains the topmost module
+### TOP_MODULE: The Name of the topmost module which will be defined inside the TOP_FILE
+### MODULE: This is the name of the python test bench WITHOUT the (.py) extension
+
+
+## Step 3:
+### Compile the BSV file to verilog
+### For that use the Makefile.compile
+
+cp Makefile.compile Makefile
+make
+
+## Step 4:
+### This will create a verilog directory in which the compiled 
+### verilog file will be available. Use the  Makefile.simulate 
+### to simulate the verilog file using combination of verilator
+### cocotb environment
+
+cp Makefile.simulate Makefile
+make SIM=verilator
+rm -rf Makefile

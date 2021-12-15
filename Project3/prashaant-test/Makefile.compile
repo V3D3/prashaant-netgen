@@ -1,0 +1,56 @@
+#
+# see LICENSE.iitm
+# Details:
+#   Makefile for Blusepec, Verilator and CocoTb simulation
+# --------------------------------------------------------------------------------------------------
+
+include Makefile.inc
+
+BSVBUILDDIR:=./build/
+VERILOGDIR:=./verilog/
+BSVOUTDIR:=./bin
+BSVINCDIR:= .:%/Libraries:$(PATH_DIV):$(PATH_MUL):$(DIR):$(BSVBUILDDIR)/common_bsv
+define_macros:=-D VERBOSITY=2 -D ASSERT=True -D CORE_AXI4=True -D RV64=True
+
+# open bsc changes
+BSC_DIR := $(shell which bsc)
+BSC_VDIR:=$(subst /bin/bsc,/,${BSC_DIR})bin/../lib/Verilog
+BSC_VIVADODIR:=$(subst /bin/bsc,/,${BSC_DIR})bin/../lib/Verilog.Vivado
+
+## BFM_V_DIR:=
+VERILATOR_FLAGS = --stats -O3 -CFLAGS -O3 -LDFLAGS -static --x-assign fast --x-initial fast \
+					--no-assert --exe sim_main.cpp -Wno-STMTDLY -Wno-UNOPTFLAT \
+					-Wno-WIDTH -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY 
+
+## VERILATOR__RBB_VPI_FLAGS
+
+TOPLEVEL_LANG ?= verilog
+
+COMPILE_ARGS += -O3 --x-assign fast --x-initial fast \
+  --noassert --bbox-sys -Wno-STMTDLY -Wno-UNOPTFLAT -Wno-WIDTH \
+  -Wno-lint -Wno-COMBDLY -Wno-INITIALDLY --autoflush  --threads 1 \
+  -DBSV_RESET_FIFO_HEAD -DBSV_RESET_FIFO_ARRAY --output-split 20000 --output-split-ctrace 10000
+  
+PWD=$(shell pwd)
+
+
+default: full_clean generate_verilog
+
+.PHONY: generate_verilog 
+generate_verilog:
+	@echo Compiling $(TOP_MODULE) in verilog ...
+	@mkdir -p $(BSVBUILDDIR); 
+	@mkdir -p $(VERILOGDIR); 
+	@$(shell if [ ! -d $(BSVBUILDDIR)/common_bsv ]; then git clone --recursive https://gitlab.com/shaktiproject/common_bsv.git $(BSVBUILDDIR)/common_bsv; fi)
+	@bsc -u -remove-dollar -verilog -elab -vdir $(VERILOGDIR) -bdir $(BSVBUILDDIR) -info-dir $(BSVBUILDDIR)\
+  -keep-fires -check-assert  $(define_macros) -D VERBOSITY=0 -D verilog=True $(BSVCOMPILEOPTS)\
+  -p $(BSVINCDIR) -g $(TOP_MODULE) $(TOP_DIR)/$(TOP_FILE)  || (echo "BSC COMPILE ERROR"; exit 1) 
+
+
+.PHONY: clean
+clean:
+	rm -rf build bin *.jou *.log
+
+.PHONY: full_clean
+full_clean: clean
+	rm -rf verilog fpga
