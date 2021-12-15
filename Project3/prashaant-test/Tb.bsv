@@ -8,10 +8,6 @@ typedef struct  {
 	int payload;
 } Data deriving(Bits, Eq);
 
-interface Ifc_node;
-	interface Ifc_channel channel;
-endinterface
-
 interface Ifc_channel;
 	// Input channel - loads filt from the previous node for routing
 	interface Put#(Data) load_flit;
@@ -26,10 +22,9 @@ instance Connectable #(Ifc_channel, Ifc_channel);
 	endmodule: mkConnection
 endinstance: Connectable
 
-module mkA(Ifc_node);
+module mkA(Ifc_channel);
 	FIFO#(Data) myfifo <- mkFIFO;
 
-	interface channel = interface Ifc_channel;
 		interface send_flit = toGet(myfifo);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
@@ -37,33 +32,29 @@ module mkA(Ifc_node);
 				$display("A got a flit");
 			endmethod
 		endinterface;
-	endinterface;
 endmodule
 
-module mkB(Ifc_node);
+module mkB(Ifc_channel);
 	FIFO#(Data) myfifo <- mkFIFO;
 
 	rule mygen;
 		myfifo.enq(Data {payload: 69});
 	endrule
 
-	interface channel = interface Ifc_channel;
 		interface send_flit = toGet(myfifo);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
 				$display("B got a flit");
 			endmethod
 		endinterface;
-	endinterface;
 endmodule
 
 (* synthesize *)
-
 module mkTb(Empty);
-	Ifc_node a <- mkA;
-	Ifc_node b <- mkB;
+	Ifc_channel a <- mkA;
+	Ifc_channel b <- mkB;
 
-	mkConnection(a.channel, b.channel);
+	mkConnection(a.send_flit, b.load_flit);
 
 	rule greet;
 		$display ("Hello World");
