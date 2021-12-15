@@ -34,7 +34,7 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_
     // (core is treated as an IL/OL, it is at 0)
     //       each IL    for each OL  VCs
 //    int n_buffers = link_count * link_count * 8;
-    Vector#(32, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
+    Vector#(200, FIFO#(Flit)) buffers <- replicateM(mkFIFO);
     // up to n_links - 1: ILi
     
     // we have link_count buckets of size link_count * 8

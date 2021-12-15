@@ -10,7 +10,7 @@ Usage:
     ...
     <Topology n>, <Dimension 1 of Tn>, <Dimension 2 of Tn><EOF>
 3. Run generator.py.
-4. Run the created runbsvcode file.
+4. Run the `runbsvcode` file for simulating.
 
 The team members consider the following as their percentages of contribution. <br>
 50% Shashank (EE19B118) <br>
@@ -19,7 +19,7 @@ The team members consider the following as their percentages of contribution. <b
 
 
 ---
-Readme for Developers
+Scripts
 ---
 `generator.py`<br>
 **requires** &nbsp;`py:re`, &nbsp;&nbsp;`py:networkx`, &nbsp;&nbsp;`core.bsv`, &nbsp;&nbsp;`L1Topology.txt`, &nbsp;&nbsp;`L2Topology.txt`<br>
