@@ -8,12 +8,8 @@ typedef struct  {
 	int payload;
 } Data deriving(Bits, Eq);
 
-interface Ifc_node;
-	interface Ifc_channel channel;
-endinterface
-interface Ifc_node2;
-	interface Ifc_channel channel1;
-	interface Ifc_channel channel2;
+interface Ifc_node#(numeric type link_count);
+	interface Vector#(link_count, Ifc_channel) channels;
 endinterface
 
 interface Ifc_channel;
@@ -30,70 +26,79 @@ instance Connectable #(Ifc_channel, Ifc_channel);
 	endmodule: mkConnection
 endinstance: Connectable
 
-module mkA(Ifc_channel);
-	FIFO#(Data) myfifo <- mkFIFO;
-
-		interface send_flit = toGet(myfifo);
+module mkA#(int link_count) (Ifc_node#(link_count));
+	Vector#(link_count, FIFO#(Data)) buffers <- replicateM(mkFIFO);
+	Vector#(link_count, Ifc_channel) temp_channels;
+	
+	for(int i = 0; i < link_count; i+=1)
+	begin
+	temp_channels[i] = interface Ifc_channel;
+		interface send_flit = toGet(buffers[i]);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
-				myfifo.enq(d);
-				$display("A got a flit");
+				buffers[i].enq(d);
+				$display("A got a flit in channel %d", i);
 			endmethod
 		endinterface;
+	endinterface;
+	end
+
+	channels = temp_channels;
 endmodule
 
-module mkB(Ifc_channel);
-	FIFO#(Data) myfifo <- mkFIFO;
+module mkC#(int link_count) (Ifc_node#(link_count));
+	Vector#(link_count, FIFO#(Data)) buffers <- replicateM(mkFIFO);
+	Vector#(link_count, Ifc_channel) temp_channels;
 
 	rule mygen;
-		myfifo.enq(Data {payload: 69});
+		buffers[1].enq(Data {payload: 69});
 	endrule
-
-		interface send_flit = toGet(myfifo);
+	
+	for(int i = 0; i < link_count; i+=1)
+	begin
+	temp_channels[i] = interface Ifc_channel;
+		interface send_flit = toGet(buffers[i]);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
-				$display("B got a flit");
+				$display("C got a flit in channel %d", i);
 			endmethod
 		endinterface;
+	endinterface;
+	end
+
+	channels = temp_channels;
 endmodule
 
-module mkC(Ifc_node2);
-	FIFO#(Data) myfifo1 <- mkFIFO;
-	FIFO#(Data) myfifo2 <- mkFIFO;
 
-	interface channel1 = interface Ifc_channel;
-		interface send_flit = toGet(myfifo1);
+module mkB#(int link_count) (Ifc_node#(link_count));
+	Vector#(link_count, FIFO#(Data)) buffers <- replicateM(mkFIFO);
+	Vector#(link_count, Ifc_channel) temp_channels;
+	
+	for(int i = 0; i < link_count; i+=1)
+	begin
+	temp_channels[i] = interface Ifc_channel;
+		interface send_flit = toGet(buffers[i]);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
-				myfifo2.enq(d);
-				$display("C got a flit in 1, put in 2");
+				buffers[1 - i].enq(d);
+				$display("C got a flit in channel %d", i);
 			endmethod
 		endinterface;
 	endinterface;
+	end
 
-	interface channel2 = interface Ifc_channel;
-		interface send_flit = toGet(myfifo2);
-		interface load_flit = interface Put#(Data);
-			method Action put(Data d);
-				myfifo1.enq(d);
-				$display("C got a flit in 2, put in 1");
-			endmethod
-		endinterface;
-	endinterface;
+	channels = temp_channels;
 endmodule
 
 (* synthesize *)
+
 module mkTb(Empty);
-	Ifc_node a <- mkA;
-	Ifc_node b <- mkB;
-	Ifc_node2 c <- mkC;
+	Ifc_node#(2) a <- mkA#(2);
+	Ifc_node#(2) b <- mkB#(2);
+	Ifc_node#(2) c <- mkC#(2);
 
-	mkConnection(a.channel, c.channel1);
-	mkConnection(c.channel2, b.channel);
-
-	rule greet;
-		$display ("Hello World");
-	endrule
+	mkConnection(a.channels[0], b.channels[0]);
+	mkConnection(b.channels[1], c.channels[1]);
 endmodule: mkTb
 
 endpackage: Tb
