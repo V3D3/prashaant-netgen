@@ -1,6 +1,9 @@
 package noc;
 
 import toplevel_defs::*;
+import core::*;
+
+import Connectable::*;
 
 import chain_l2::*;
 import ring_l2::*;

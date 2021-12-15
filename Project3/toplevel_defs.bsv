@@ -101,4 +101,18 @@ instance Connectable #(Ifc_channel,
    endmodule: mkConnection
 endinstance: Connectable
 
+
+instance Connectable #(Ifc_core,
+		       Ifc_channel);
+
+   module mkConnection #(Ifc_core channel_a,
+			 Ifc_channel channel_b )
+		       (Empty);
+		       
+		       mkConnection (channel_a.send_flit, channel_b.load_flit);
+		       mkConnection (channel_b.send_flit, channel_a.load_flit);
+		       
+   endmodule: mkConnection
+endinstance: Connectable
+
 endpackage
