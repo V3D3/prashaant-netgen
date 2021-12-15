@@ -11,6 +11,10 @@ typedef struct  {
 interface Ifc_node;
 	interface Ifc_channel channel;
 endinterface
+interface Ifc_node2;
+	interface Ifc_channel channel1;
+	interface Ifc_channel channel2;
+endinterface
 
 interface Ifc_channel;
 	// Input channel - loads filt from the previous node for routing
@@ -57,13 +61,40 @@ module mkB(Ifc_node);
 	endinterface;
 endmodule
 
+module mkC(Ifc_node2);
+	FIFO#(Data) myfifo1 <- mkFIFO;
+	FIFO#(Data) myfifo2 <- mkFIFO;
+
+	interface channel1 = interface Ifc_channel;
+		interface send_flit = toGet(myfifo1);
+		interface load_flit = interface Put#(Data);
+			method Action put(Data d);
+				myfifo2.enq(d);
+				$display("C got a flit in 1, put in 2");
+			endmethod
+		endinterface;
+	endinterface;
+
+	interface channel2 = interface Ifc_channel;
+		interface send_flit = toGet(myfifo2);
+		interface load_flit = interface Put#(Data);
+			method Action put(Data d);
+				myfifo1.enq(d);
+				$display("C got a flit in 2, put in 1");
+			endmethod
+		endinterface;
+	endinterface;
+endmodule
+
 (* synthesize *)
 
 module mkTb(Empty);
 	Ifc_node a <- mkA;
 	Ifc_node b <- mkB;
+	Ifc_node2 c <- mkC;
 
-	mkConnection(a.channel, b.channel);
+	mkConnection(a.channel, c.channel1);
+	mkConnection(c.channel2, b.channel);
 
 	rule greet;
 		$display ("Hello World");
