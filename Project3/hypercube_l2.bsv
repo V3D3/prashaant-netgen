@@ -5,14 +5,10 @@ import toplevel_defs ::*;
 import GetPut::*;
 import FIFO::*;
 
-module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_Diff1, int link_Diff0, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module hypercube_l2#(int link_count, Node_addr self_addr, int link_Diff2, int link_Diff1, int link_Diff0, Bool isHead, Bool isL1) (Ifc_node#(link_count));
     // Eight virtual channels per link, routing is via flipping Most Significant Differing Bit
     // n_links: 3 (all)
     // Core will have access to one input and one output buffer
-
-    int link_count = n_links + 1;
-    if (isHead)
-        link_count = link_count + 1;
 
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
@@ -68,7 +64,7 @@ module hypercube_l2#(int n_links, Node_addr self_addr, int link_Diff2, int link_
     // Case: I am not a headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(link_count,Ifc_channel) temp_node_channels;	
 
     if (!isL1)
     begin

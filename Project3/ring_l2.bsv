@@ -6,7 +6,7 @@ import GetPut::*;
 import FIFO::*;
 
 
-module ring_l2#(int n_links, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(n_links));
+module ring_l2#(int link_count, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_node#(link_count));
 
 	/*
 	 Date line algorithm is to be implemented.
@@ -15,12 +15,8 @@ module ring_l2#(int n_links, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_no
 	 Each input link would have buffers corresponding to these 4 VCs. Additionally, the flit generation module would have a buffer for 4 VCs (for uniformity, though a generated flit can only be inserted in the lower VC)
 	*/
 
-    int link_count = n_links + 1;
     int linkPos = link_count;
     int linkNeg = 0;
-
-    if (isHead)
-        link_count = link_count + 1;
 
     // Actual node links depend on the cases:
     // this is a non-head node: 0: core, 1: node and so on
@@ -60,7 +56,7 @@ module ring_l2#(int n_links, Node_addr self_addr, Bool isHead, Bool isL1)(Ifc_no
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
 
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(link_count,Ifc_channel) temp_node_channels;	
 
     if (!isL1)
     begin

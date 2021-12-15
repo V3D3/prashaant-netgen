@@ -5,14 +5,10 @@ import toplevel_defs ::*;
 import GetPut::*;
 import FIFO::*;
 
-module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link_XPos, int link_XNeg, int link_YPos, int link_YNeg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module mesh_l2#(int link_count, Node_addr self_addr, int rows, int cols, int link_XPos, int link_XNeg, int link_YPos, int link_YNeg, Bool isHead, Bool isL1) (Ifc_node#(link_count));
     // Only one virtual channel per link, routing is X-Y
     // n_links: 2 (corner) / 3 (edge) / 4 (internal)
     // Core will have access to one input and one output buffer
-
-    int link_count = n_links + 1;
-    if (isHead)
-        link_count = link_count + 1;
 
     int linkXPos = link_XPos;
     int linkXNeg = link_XNeg;
@@ -70,7 +66,7 @@ module mesh_l2#(int n_links, Node_addr self_addr, int rows, int cols, int link_X
     // Case: I am not a headrouter
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(link_count,Ifc_channel) temp_node_channels;	
 
     if (!isL1)
     begin

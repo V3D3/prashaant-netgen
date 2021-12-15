@@ -5,14 +5,10 @@ import toplevel_defs ::*;
 import GetPut::*;
 import FIFO::*;
 
-module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int link_Neg, Bool isHead, Bool isL1) (Ifc_node#(n_links));
+module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int link_Neg, Bool isHead, Bool isL1) (Ifc_node#(link_count));
     // Only one virtual channel per link, routing is simple shortest path
     // n_links: 1 (edge) / 2 (internal)
     // Core will have access to one input and one output buffer
-
-    int link_count = n_links + 1;
-    if (isHead)
-        link_count = link_count + 1;
 
     int linkPos = link_Pos;
     int linkNeg = link_Neg;
@@ -52,7 +48,7 @@ module chain_l2#(int n_links, Node_addr self_addr, int len, int link_Pos, int li
     //      => I am either a non-head node (start: 1)
     //         or a head node (start: 2)
 
-    Vector#(n_links,Ifc_channel) temp_node_channels;	
+    Vector#(link_count,Ifc_channel) temp_node_channels;	
     
     if (!isL1)
     begin

@@ -40,7 +40,7 @@ typedef struct {
 	Node_addr fin_dest;
 	// Payload
 	Bit#(32) payload;
-	
+	// Virtual Channel
 	int vc;
 	
 	} Flit deriving(Bits, Eq);
@@ -67,12 +67,12 @@ endmodule
 
 
 // Interfaces for the nodes
-interface Ifc_node#(numeric type n_links);   // Since the links are fully duplex, number of input links and output links would be the same
+interface Ifc_node#(numeric type link_count);   // Since the links are fully duplex, number of input links and output links would be the same
 
 	// The interface for the nodes are basically the set of duplex channels connecting it to other nodes. 
 	// n_links is the parametrised number of channels that the node contains.
 	// Defining a n_link dimensional Vector of channel interfaces.
-	interface Vector#(n_links,Ifc_channel) node_channels;	
+	interface Vector#(link_count,Ifc_channel) node_channels;	
 
 	// Note : Each of these channels are individually accessible and connectable from the top module
 

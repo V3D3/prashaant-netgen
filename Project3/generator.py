@@ -818,12 +818,12 @@ elif L1_network_type == "F":
 elif L1_network_type == "H":
   outerTopology = hypercube_head_gen()
 
-def mkEdge(G, edge):
+def mkEdge(G, edge, outer=False):
     src = edge[2]["src"]
     dest = edge[2]["dest"]
-    if (G.nodes[edge[0]]['exdata'].isHead):
+    if (G.nodes[edge[0]]['exdata'].isHead) and (not outer):
         src += 1
-    if (G.nodes[edge[1]]['exdata'].isHead):
+    if (G.nodes[edge[1]]['exdata'].isHead) and (not outer):
         dest += 1
     res = f'        mkConnection(n{edge[0]}.node_channels[{src}], n{edge[1]}.node_channels[{dest}]);\n'
     return res
@@ -855,7 +855,7 @@ headIdMode = 0
 for node in G.nodes:
     # first two fields: n_links (int) and self_addr (Node_addr)
     nodeId = 'n' + node
-    ec = G.nodes[node]['exdata'].maxEdges
+    ec = G.nodes[node]['exdata'].maxEdges + 1 # 1 extra for link to non-core node
     if tc == 'R':
         OUT += f'        Ifc_node#({ec}) {nodeId} <- ring_l2({ec}, Node_addr {{l1_headID: {int(node)}, l2_ID: 999}}, False, True);\n'
     elif tc == 'C':
@@ -884,7 +884,7 @@ for node in G.nodes:
     edgesToRemove = []
     for edge in G.edges(node, data=True):
         edgesToRemove.append(edge)
-        OUT += mkEdge(G, edge)
+        OUT += mkEdge(G, edge, outer=True)
 
     for edge in edgesToRemove:
         G.remove_edge(edge[0], edge[1])
@@ -915,7 +915,10 @@ for head in innerTopologies:
     for node in G.nodes:
         nodeId = 'n' + node
         nodeIntId = G.nodes[node]['exdata'].inID
-        ec = G.nodes[node]['exdata'].maxEdges
+        ec = G.nodes[node]['exdata'].maxEdges + 1 # 1 extra for core
+
+        if(G.nodes[node]['exdata'].isHead):
+          ec += 1 # extra to connect to associated head router (L1 node)
 
         if tc == 'R':
             OUT += f'        Ifc_node#({ec}) {nodeId} <- ring_l2({ec}, Node_addr {{l1_headID: {int(headIntId)}, l2_ID: {int(nodeIntId)}}}, {G.nodes[node]["exdata"].isHead}, False);\n'
