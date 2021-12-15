@@ -3,6 +3,7 @@ package Tb;
 import GetPut::*;
 import FIFO::*;
 import Connectable::*;
+import Vector::*;
 
 typedef struct  {
 	int payload;
@@ -30,7 +31,7 @@ module mkA#(int link_count) (Ifc_node#(link_count));
 	Vector#(link_count, FIFO#(Data)) buffers <- replicateM(mkFIFO);
 	Vector#(link_count, Ifc_channel) temp_channels;
 	
-	for(int i = 0; i < link_count; i+=1)
+	for(int i = 0; i < link_count; i=i+1)
 	begin
 	temp_channels[i] = interface Ifc_channel;
 		interface send_flit = toGet(buffers[i]);
@@ -43,7 +44,7 @@ module mkA#(int link_count) (Ifc_node#(link_count));
 	endinterface;
 	end
 
-	channels = temp_channels;
+	interface channels = temp_channels;
 endmodule
 
 module mkC#(int link_count) (Ifc_node#(link_count));
@@ -54,7 +55,7 @@ module mkC#(int link_count) (Ifc_node#(link_count));
 		buffers[1].enq(Data {payload: 69});
 	endrule
 	
-	for(int i = 0; i < link_count; i+=1)
+	for(int i = 0; i < link_count; i=i+1)
 	begin
 	temp_channels[i] = interface Ifc_channel;
 		interface send_flit = toGet(buffers[i]);
@@ -66,7 +67,7 @@ module mkC#(int link_count) (Ifc_node#(link_count));
 	endinterface;
 	end
 
-	channels = temp_channels;
+	interface channels = temp_channels;
 endmodule
 
 
@@ -74,28 +75,28 @@ module mkB#(int link_count) (Ifc_node#(link_count));
 	Vector#(link_count, FIFO#(Data)) buffers <- replicateM(mkFIFO);
 	Vector#(link_count, Ifc_channel) temp_channels;
 	
-	for(int i = 0; i < link_count; i+=1)
+	for(int i = 0; i < link_count; i=i+1)
 	begin
 	temp_channels[i] = interface Ifc_channel;
 		interface send_flit = toGet(buffers[i]);
 		interface load_flit = interface Put#(Data);
 			method Action put(Data d);
 				buffers[1 - i].enq(d);
-				$display("C got a flit in channel %d", i);
+				$display("B got a flit in channel %d", i);
 			endmethod
 		endinterface;
 	endinterface;
 	end
 
-	channels = temp_channels;
+	interface channels = temp_channels;
 endmodule
 
 (* synthesize *)
 
 module mkTb(Empty);
-	Ifc_node#(2) a <- mkA#(2);
-	Ifc_node#(2) b <- mkB#(2);
-	Ifc_node#(2) c <- mkC#(2);
+	Ifc_node#(2) a <- mkA(2);
+	Ifc_node#(2) b <- mkB(2);
+	Ifc_node#(2) c <- mkC(2);
 
 	mkConnection(a.channels[0], b.channels[0]);
 	mkConnection(b.channels[1], c.channels[1]);
