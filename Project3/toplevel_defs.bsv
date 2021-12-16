@@ -35,6 +35,7 @@ typedef struct {
 	// Is this flit valid?
 	Bit#(1) valid;
 	// Source address
+//	Bit#(8)    src;
 	Node_addr src;
 	// Final Destination address
 	Node_addr fin_dest;
