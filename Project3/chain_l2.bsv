@@ -57,7 +57,16 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
             // attach to input and output channels
             temp_node_channels[i] = interface Ifc_channel
                 		// send flit from me to others
-                		interface send_flit = toGet(buffers[link_count * arbiter_rr_counter + i]);
+                		interface send_flit = interface Get#(Flit);
+                            method ActionValue #(Flit) get();
+                                int idx = link_count * arbiter_rr_counter + i;
+                                Flit f = buffers[idx].first();
+                                $display("Request for a flit at N%dZ%d", self_addr.l1_headID, self_addr.l2_ID);
+                                $display("Arbiter: %d, Flit src: N%dZ%d, Flit valid? %d", arbiter_rr_counter, f.src.l1_headID, f.src.l2_ID, f.valid);
+                                buffers[idx].deq();
+                                return f;
+                            endmethod
+                        endinterface;
                 		// receive a flit from somewhere
                 		interface load_flit = interface Put#(Flit)
                     					method Action put(Flit f);
@@ -79,15 +88,12 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
 
                                 						if(diff > 0)
                                     							buffers[link_count * i + linkPos].enq(f);
-                                                                $display("It needs to go forward, sending to N%dZ%d", self_addr.l1_headID, self_addr.l2_ID);
                                 						else if(diff < 0)
                                     							buffers[link_count * i + linkNeg].enq(f);
-                                                                $display("It needs to go backwards, sending to N%dZ%d", self_addr.l1_headID, self_addr.l2_ID);
                                 						else
                                     							// it must go outwards, to L1 routing
                                     							if (isHead)
                                         							buffers[link_count * i + 1].enq(f);
-                                                                    $display("It needs to go outwards and I am head, sending to my head router");
                                     							else
                                         							// Error!
                                         							$display("error: chain_l2.bsv:86");
