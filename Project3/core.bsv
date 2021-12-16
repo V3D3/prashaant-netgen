@@ -16,7 +16,7 @@ import FIFO::*;
 import LFSR::*;
 
 
-module mkCore(Ifc_core);
+module mkCore#(Node_addr node)(Ifc_core);
 
   // LFSR for generating random numbers
   LFSR#(Bit#(8)) lfsr <- mkLFSR_8;
@@ -34,10 +34,10 @@ module mkCore(Ifc_core);
   endrule
 
   // The following action occurs at random time (25% probability now)
-  rule action2 (lfsr.value() > 192);
+rule action2 (lfsr.value() > 192);
       // Modify this so that it generates random flits with the constraints set by the actual network
-      $display("Generated a flit");
-      generated_flit.enq( Flit {valid : 1, src : Node_addr {l1_headID : 0, l2_ID : 0}, fin_dest : Node_addr {l1_headID : 1, l2_ID : 1}, payload : 0, vc: 0 });  
+      $display("Generated a flit at N%dZ%d",node.l1_headID,node.l2_ID);
+      generated_flit.enq( Flit {valid : 1, src : node, fin_dest : Node_addr {l1_headID : 1, l2_ID : 1}, payload : 0, vc: 0 });  
   endrule
   
   interface send_flit = toGet(generated_flit);
