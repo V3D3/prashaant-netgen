@@ -79,12 +79,15 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
 
                                 						if(diff > 0)
                                     							buffers[link_count * i + linkPos].enq(f);
+                                                                $display("It needs to go forward, sending to N%dZ%d", self_addr.l1_headID, self_addr.l2_ID);
                                 						else if(diff < 0)
                                     							buffers[link_count * i + linkNeg].enq(f);
+                                                                $display("It needs to go backwards, sending to N%dZ%d", self_addr.l1_headID, self_addr.l2_ID);
                                 						else
                                     							// it must go outwards, to L1 routing
                                     							if (isHead)
                                         							buffers[link_count * i + 1].enq(f);
+                                                                    $display("It needs to go outwards and I am head, sending to my head router");
                                     							else
                                         							// Error!
                                         							$display("error: chain_l2.bsv:86");
