@@ -65,6 +65,7 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
                         					if(f.valid == 1)
                         					begin
                             						// route it to an output buffer, if not mine
+									$display("The flit generated at N%dZ%d has reached N%dZ%d",f.src.l1_headID,f.src.l2_ID, self_addr.l1_headID,self_addr.l2_ID);
                             						if (f.fin_dest != self_addr)
                             						begin
                                 						// assume destination is in different tile, route to head
@@ -90,7 +91,10 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
                             						end
                             						else
                                 						// its mine, route it to the core
+										begin
                                 						buffers[link_count * i].enq(f);
+										$display("The flit generated at N%dZ%d has reached its destination N %d Z %d",f.src.l1_headID,f.src.l2_ID,f.fin_dest.l1_headID,f.fin_dest.l2_ID);
+										end
                         					end
                     					endmethod
                 					endinterface;
@@ -112,6 +116,8 @@ module chain_l2#(int link_count, Node_addr self_addr, int len, int link_Pos, int
                         // is the flit useful?
                         if(f.valid == 1)
                         begin
+				$display("The flit generated at N%dZ%d has reached n%d",f.src.l1_headID,f.src.l2_ID,self_addr.l1_headID);
+
                             // route it to an output buffer, if not my tile's
                             int diff = f.fin_dest.l1_headID - self_addr.l1_headID;
                             if(diff > 0)
